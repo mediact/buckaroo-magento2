@@ -32,14 +32,12 @@ define(
     [
         'jquery',
         'ko',
-        'Magento_Checkout/js/model/quote',
         'mage/translate',
         'BuckarooSDK'
     ],
     function (
         $,
         ko,
-        quote,
     ) {
         'use strict';
 
@@ -47,13 +45,34 @@ define(
 
         return {
             transactionResult : transactionResult,
+            quote : null,
 
             showPayButton: function () {
+                BuckarooSdk.ApplePay.checkApplePaySupport(window.checkoutConfig.payment.buckaroo.applepay.guid).then(
+                    function (applePaySupported) {
+                        if (applePaySupported) {
+                            var buttonOptions = this.getApplepayOptions();
+
+                            var payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', buttonOptions);
+                            payment.showPayButton('black');
+                        }
+                    }.bind(this)
+                );
+            },
+
+            /**
+             * @param newQuote
+             */
+            setQuote: function (newQuote) {
+                this.quote = newQuote;
+            },
+
+            getApplepayOptions: function () {
                 var self = this;
 
                 var applepayOptions = new BuckarooSdk.ApplePay.ApplePayOptions(
                     window.checkoutConfig.payment.buckaroo.applepay.storeName,
-                    quote.shippingAddress().countryId,
+                    this.quote.shippingAddress().countryId,
                     window.checkoutConfig.quoteData.quote_currency_code,
                     window.checkoutConfig.payment.buckaroo.applepay.cultureCode,
                     window.checkoutConfig.payment.buckaroo.applepay.guid,
@@ -64,18 +83,15 @@ define(
                     self.captureFunds.bind(this)
                 );
 
-                if (typeof ApplePaySession !== 'undefined') {
-                    var payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', applepayOptions);
-                    payment.showPayButton('black');
-                }
+                return applepayOptions;
             },
 
             /**
              * @returns {{amount: string, label, type: string}[]}
              */
             processLineItems: function () {
-                var subTotal = parseFloat(quote.totals().subtotal).toFixed(2);
-                var shippingInclTax = parseFloat(quote.totals().shipping_incl_tax).toFixed(2);
+                var subTotal = parseFloat(this.quote.totals().subtotal).toFixed(2);
+                var shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
 
                 return [
                     {label: $.mage.__('Subtotal'), amount: subTotal, type: 'final'},
@@ -87,23 +103,23 @@ define(
              * @returns {{amount: string, label: *, type: string}}
              */
             processTotalLineItems: function () {
-                var shippingInclTax = parseFloat(quote.totals().shipping_incl_tax).toFixed(2);
+                var grandTotal = parseFloat(this.quote.totals().grand_total).toFixed(2);
                 var storeName = window.checkoutConfig.payment.buckaroo.applepay.storeName;
 
-                return {label: storeName, amount: shippingInclTax, type: 'final'};
+                return {label: storeName, amount: grandTotal, type: 'final'};
             },
 
             /**
              * @returns {{identifier: (string), amount: string, label: string, detail}[]}
              */
             shippingMethodInformation: function () {
-                var shippingInclTax = parseFloat(quote.totals().shipping_incl_tax).toFixed(2);
-                var shippingTitle = quote.shippingMethod().carrier_title + ' (' + quote.shippingMethod().method_title + ')';
+                var shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
+                var shippingTitle = this.quote.shippingMethod().carrier_title + ' (' + this.quote.shippingMethod().method_title + ')';
 
                 return [{
                     label: shippingTitle,
                     amount: shippingInclTax,
-                    identifier: quote.shippingMethod().method_code,
+                    identifier: this.quote.shippingMethod().method_code,
                     detail: $.mage.__('Shipping Method selected during checkout.')
                 }];
             },

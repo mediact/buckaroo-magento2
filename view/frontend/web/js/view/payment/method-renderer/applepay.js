@@ -135,6 +135,7 @@ define(
                 },
 
                 showPayButton: function () {
+                    applepayPay.setQuote(quote);
                     applepayPay.showPayButton();
                 },
 
