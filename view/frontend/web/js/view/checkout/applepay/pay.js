@@ -32,12 +32,25 @@ define(
     [
         'jquery',
         'ko',
+        'mage/url',
+        'Magento_Checkout/js/model/resource-url-manager',
+        'Magento_Checkout/js/action/create-shipping-address',
+        'Magento_Checkout/js/action/select-shipping-address',
+        'Magento_Checkout/js/action/select-shipping-method',
+        'Magento_Checkout/js/checkout-data',
+        'Magento_Checkout/js/model/shipping-rate-service',
         'mage/translate',
         'BuckarooSDK'
     ],
     function (
         $,
         ko,
+        urlBuilder,
+        resourceUrlManager,
+        createShippingAddress,
+        selectShippingAddress,
+        selectShippingMethod,
+        checkoutData,
     ) {
         'use strict';
 
@@ -45,15 +58,18 @@ define(
 
         return {
             transactionResult : transactionResult,
+            applepayOptions : null,
+            isOnCheckout : false,
             quote : null,
+            shippingGroups: {},
 
             showPayButton: function () {
                 BuckarooSdk.ApplePay.checkApplePaySupport(window.checkoutConfig.payment.buckaroo.applepay.guid).then(
                     function (applePaySupported) {
                         if (applePaySupported) {
-                            var buttonOptions = this.getApplepayOptions();
+                            this.generateApplepayOptions();
 
-                            var payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', buttonOptions);
+                            var payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', this.applepayOptions);
                             payment.showPayButton('black');
                         }
                     }.bind(this)
@@ -67,23 +83,46 @@ define(
                 this.quote = newQuote;
             },
 
-            getApplepayOptions: function () {
-                var self = this;
+            /**
+             * @param isOnCheckout
+             */
+            setIsOnCheckout: function (isOnCheckout) {
+                this.isOnCheckout = isOnCheckout;
+            },
 
-                var applepayOptions = new BuckarooSdk.ApplePay.ApplePayOptions(
+            generateApplepayOptions: function () {
+                var self = this;
+                var shippingMethods = null;
+                var shippingContactCallback = null;
+                var shipmentMethodCallback = null;
+
+                var country = window.checkoutConfig.payment.buckaroo.applepay.cultureCode.toUpperCase();
+                if (null !== this.quote.shippingAddress()) {
+                    country = this.quote.shippingAddress().countryId;
+                }
+
+                if (this.isOnCheckout) {
+                    shippingMethods = self.quoteShippingMethodInformation();
+                } else {
+                    shippingMethods = self.availableShippingMethodInformation();
+                    shippingContactCallback = self.onSelectedShippingContact.bind(this);
+                    shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
+                }
+
+                this.applepayOptions = new BuckarooSdk.ApplePay.ApplePayOptions(
                     window.checkoutConfig.payment.buckaroo.applepay.storeName,
-                    this.quote.shippingAddress().countryId,
+                    country,
                     window.checkoutConfig.quoteData.quote_currency_code,
                     window.checkoutConfig.payment.buckaroo.applepay.cultureCode,
                     window.checkoutConfig.payment.buckaroo.applepay.guid,
                     self.processLineItems(),
                     self.processTotalLineItems(),
                     "shipping",
-                    self.shippingMethodInformation(),
-                    self.captureFunds.bind(this)
+                    shippingMethods,
+                    self.captureFunds.bind(this),
+                    shipmentMethodCallback,
+                    shippingContactCallback
                 );
-
-                return applepayOptions;
             },
 
             /**
@@ -112,7 +151,11 @@ define(
             /**
              * @returns {{identifier: (string), amount: string, label: string, detail}[]}
              */
-            shippingMethodInformation: function () {
+            quoteShippingMethodInformation: function () {
+                if (null === this.quote.shippingMethod()) {
+                    return [];
+                }
+
                 var shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
                 var shippingTitle = this.quote.shippingMethod().carrier_title + ' (' + this.quote.shippingMethod().method_title + ')';
 
@@ -122,6 +165,113 @@ define(
                     identifier: this.quote.shippingMethod().method_code,
                     detail: $.mage.__('Shipping Method selected during checkout.')
                 }];
+            },
+
+            availableShippingMethodInformation: function () {
+                var shippingMethods = [];
+
+                $.each(this.shippingGroups, function (index, rate) {
+                    var shippingInclTax = parseFloat(rate['price_incl_tax']).toFixed(2);
+
+                    shippingMethods.push({
+                        label: rate['carrier_title'],
+                        amount: shippingInclTax,
+                        identifier: rate['method_code'],
+                        detail: rate['method_title']
+                    });
+                });
+
+                return shippingMethods;
+            },
+
+            onSelectedShipmentMethod: function (event) {
+                var newShippingMethod = this.shippingGroups[event.identifier];
+
+                selectShippingMethod(newShippingMethod);
+                checkoutData.setSelectedShippingRate(newShippingMethod['carrier_code'] + '_' + newShippingMethod['method_code']);
+
+                var subtotal = this.quote.totals().subtotal;
+                this.quote.totals().shipping_incl_tax = newShippingMethod['price_incl_tax'];
+                this.quote.totals().grand_total = subtotal + newShippingMethod['price_incl_tax'];
+
+                var authorizationResult = {
+                    newTotal: this.processTotalLineItems(),
+                    newLineItems: this.processLineItems()
+                };
+
+                return Promise.resolve(authorizationResult);
+            },
+
+            onSelectedShippingContact: function (event) {
+                var newShippingAddress = this.setNewQuoteAddress(event);
+                this.updateShippingMethods(newShippingAddress);
+
+                var authorizationResult = {
+                    errors: [],
+                    newShippingMethods: this.availableShippingMethodInformation(),
+                    newTotal: this.processTotalLineItems(),
+                    newLineItems: this.processLineItems()
+                };
+
+                return Promise.resolve(authorizationResult);
+            },
+
+            setNewQuoteAddress: function (address) {
+                var addressData = {
+                    firstname: address.givenName,
+                    lastname: address.familyName,
+                    comapny: '',
+                    street: [''],
+                    city: address.locality,
+                    postcode: address.postalCode,
+                    region: address.administrativeArea,
+                    region_id: '',
+                    country_id: address.countryCode,
+                    telephone: '',
+                    save_in_address_book: 0
+                };
+
+                var newShippingAddress = createShippingAddress(addressData);
+                selectShippingAddress(newShippingAddress);
+                checkoutData.setSelectedShippingAddress(newShippingAddress.getKey());
+                checkoutData.setNewCustomerShippingAddress($.extend(true, {}, addressData));
+
+                return newShippingAddress;
+            },
+
+            updateShippingMethods: function (address) {
+                var serviceUrl = resourceUrlManager.getUrlForEstimationShippingMethodsForNewAddress(this.quote);
+                var payload = JSON.stringify({
+                    address: {
+                        'street': address.street,
+                        'city': address.city,
+                        'region_id': address.regionId,
+                        'region': address.region,
+                        'country_id': address.countryId,
+                        'postcode': address.postcode,
+                        'firstname': address.firstname,
+                        'lastname': address.lastname,
+                        'company': address.company,
+                        'telephone': address.telephone,
+                        'custom_attributes': address.customAttributes,
+                        'save_in_address_book': address.saveInAddressBook
+                    }
+                });
+
+                $.ajax({
+                    url: urlBuilder.build(serviceUrl),
+                    type: 'POST',
+                    data: payload,
+                    global: false,
+                    contentType: 'application/json',
+                    async: false
+                }).done(function (result) {
+                    this.shippingGroups = {};
+
+                    $.each(result, function (index, rate) {
+                        this.shippingGroups[rate['method_code']] = rate;
+                    }.bind(this));
+                }.bind(this));
             },
 
             /**
@@ -134,8 +284,7 @@ define(
                     errors: []
                 };
 
-                var transactionData = this.formatPaymentResponse(payment);
-                this.transactionResult(transactionData);
+                this.transactionResult(payment);
 
                 $('#debug-wrapper').removeClass('d-none');
                 $('#debug').html(JSON.stringify(payment));

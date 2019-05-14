@@ -135,6 +135,7 @@ define(
                 },
 
                 showPayButton: function () {
+                    applepayPay.setIsOnCheckout(true);
                     applepayPay.setQuote(quote);
                     applepayPay.showPayButton();
                 },
@@ -152,13 +153,42 @@ define(
                 },
 
                 getData: function () {
+                    var transactionData = this.formatTransactionResponse(applepayPay.transactionResult());
+
                     return {
                         "method": this.item.method,
                         "po_number": null,
                         "additional_data": {
-                            "applepayTransaction" : applepayPay.transactionResult()
+                            "applepayTransaction" : transactionData
                         }
                     };
+                },
+
+                /**
+                 * @param response
+                 * @returns {string|null}
+                 */
+                formatTransactionResponse: function (response) {
+                    if (null === response || 'undefined' === response) {
+                        return null;
+                    }
+
+                    var paymentData = response.token.paymentData;
+
+                    var formattedData = {
+                        "paymentData": {
+                            "version": paymentData.version,
+                            "data": paymentData.data,
+                            "signature": paymentData.signature,
+                            "header": {
+                                "ephemeralPublicKey": paymentData.header.ephemeralPublicKey,
+                                "publicKeyHash": paymentData.header.publicKeyHash,
+                                "transactionId": paymentData.header.transactionId,
+                            }
+                        }
+                    };
+
+                    return JSON.stringify(formattedData);
                 }
             }
         );
