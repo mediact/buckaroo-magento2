@@ -267,9 +267,21 @@ define(
                     async: false
                 }).done(function (result) {
                     this.shippingGroups = {};
+                    var firstLoop = true;
 
                     $.each(result, function (index, rate) {
                         this.shippingGroups[rate['method_code']] = rate;
+
+                        if (firstLoop) {
+                            selectShippingMethod(rate);
+                            checkoutData.setSelectedShippingRate(rate['carrier_code'] + '_' + rate['method_code']);
+
+                            var subtotal = this.quote.totals().subtotal;
+                            this.quote.totals().shipping_incl_tax = rate['price_incl_tax'];
+                            this.quote.totals().grand_total = subtotal + rate['price_incl_tax'];
+
+                            firstLoop = false;
+                        }
                     }.bind(this));
                 }.bind(this));
             },

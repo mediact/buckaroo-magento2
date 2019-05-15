@@ -39,6 +39,7 @@ define(
         'Magento_Checkout/js/action/create-billing-address',
         'Magento_Checkout/js/action/select-billing-address',
         'Magento_Checkout/js/action/select-payment-method',
+        'Magento_Checkout/js/model/shipping-save-processor/payload-extender',
         'Magento_Checkout/js/checkout-data',
         'TIG_Buckaroo/js/action/place-order',
         'buckaroo/applepay/pay'
@@ -53,6 +54,7 @@ define(
         createBillingAddress,
         selectBillingAddress,
         selectPaymentMethodAction,
+        payloadExtender,
         checkoutData,
         placeOrderAction,
         applepayPay
@@ -80,6 +82,7 @@ define(
             placeOrder: function () {
                 quote.guestEmail = applepayPay.transactionResult().shippingContact.emailAddress;
                 this.setShippingAddress();
+                this.saveShipmentInfo();
                 this.setBillingAddress();
                 this.selectPaymentMethod();
                 this.savePaymentInfo();
@@ -128,9 +131,9 @@ define(
                     city: address.locality,
                     postcode: address.postalCode,
                     region: address.administrativeArea,
-                    region_id: '',
+                    region_id: 0,
                     country_id: address.countryCode,
-                    telephone: '',
+                    telephone: '0201234567',
                     save_in_address_book: 0,
                 };
 
@@ -142,6 +145,36 @@ define(
                 checkoutData.setSelectedPaymentMethod('tig_buckaroo_applepay');
 
                 return true;
+            },
+
+            saveShipmentInfo: function () {
+                var payload;
+
+                if (!quote.billingAddress()) {
+                    selectBillingAddress(quote.shippingAddress());
+                }
+
+                payload = {
+                    addressInformation: {
+                        'shipping_address': quote.shippingAddress(),
+                        'billing_address': quote.billingAddress(),
+                        'shipping_method_code': quote.shippingMethod()['method_code'],
+                        'shipping_carrier_code': quote.shippingMethod()['carrier_code']
+                    }
+                };
+
+                payloadExtender(payload);
+
+                var url = resourceUrlManager.getUrlForSetShippingInformation(quote);
+
+                $.ajax({
+                    url: urlBuilder.build(url),
+                    type: 'POST',
+                    data: JSON.stringify(payload),
+                    global: false,
+                    contentType: 'application/json',
+                    async: false
+                });
             },
 
             savePaymentInfo: function () {
