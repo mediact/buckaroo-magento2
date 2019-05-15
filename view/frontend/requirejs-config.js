@@ -36,6 +36,9 @@ var config = {
             "buckaroo/applepay/catalog-product-view": "TIG_Buckaroo/js/view/checkout/applepay/catalog-product-view",
             "buckaroo/applepay/checkout-cart": "TIG_Buckaroo/js/view/checkout/applepay/checkout-cart",
             "buckaroo/applepay/pay": "TIG_Buckaroo/js/view/checkout/applepay/pay",
+            "buckaroo/applepay/billing-handler": "TIG_Buckaroo/js/view/checkout/applepay/handlers/billing-handler",
+            "buckaroo/applepay/shipping-handler": "TIG_Buckaroo/js/view/checkout/applepay/handlers/shipping-handler",
+            "buckaroo/applepay/order-handler": "TIG_Buckaroo/js/view/checkout/applepay/handlers/order-handler",
             "buckaroo/payconiq/pay": "TIG_Buckaroo/js/view/checkout/payconiq/pay"
         }
     },
