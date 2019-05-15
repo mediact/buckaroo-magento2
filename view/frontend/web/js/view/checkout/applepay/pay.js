@@ -64,6 +64,10 @@ define(
             shippingGroups: {},
 
             showPayButton: function () {
+                if (typeof window.checkoutConfig === 'undefined') {
+                    return;
+                }
+
                 BuckarooSdk.ApplePay.checkApplePaySupport(window.checkoutConfig.payment.buckaroo.applepay.guid).then(
                     function (applePaySupported) {
                         if (applePaySupported) {
@@ -107,6 +111,11 @@ define(
                     shippingMethods = self.availableShippingMethodInformation();
                     shippingContactCallback = self.onSelectedShippingContact.bind(this);
                     shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
+                }
+
+                if (typeof this.quote.totals() === 'undefined') {
+                    this.quote.totals(window.checkoutConfig.quoteData);
+                    this.quote.totals().shipping_incl_tax = 0;
                 }
 
                 this.applepayOptions = new BuckarooSdk.ApplePay.ApplePayOptions(

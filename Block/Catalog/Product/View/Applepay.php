@@ -31,27 +31,56 @@
  */
 namespace TIG\Buckaroo\Block\Catalog\Product\View;
 
+use Magento\Checkout\Model\Cart;
+use Magento\Checkout\Model\CompositeConfigProvider;
 use Magento\Framework\View\Element\Template;
 use Magento\Framework\View\Element\Template\Context;
 use TIG\Buckaroo\Model\ConfigProvider\Method\Applepay as ApplepayConfig;
 
 class Applepay extends Template
 {
-    private $applepayConfig;
+    /** @var Cart */
+    private $cart;
+
+    /** @var CompositeConfigProvider */
+    private $compositeConfigProvider;
+
+    /** @var ApplepayConfig */
+    private $applepayConfigProvider;
 
     /**
-     * @param Context        $context
-     * @param ApplepayConfig $applepayConfig
-     * @param array          $data
+     * @param Context                 $context
+     * @param Cart                    $cart
+     * @param CompositeConfigProvider $compositeConfigProvider
+     * @param ApplepayConfig          $applepayConfigProvider
+     * @param array                   $data
      */
     public function __construct(
         Context $context,
-        ApplepayConfig $applepayConfig,
+        Cart $cart,
+        CompositeConfigProvider $compositeConfigProvider,
+        ApplepayConfig $applepayConfigProvider,
         array $data = []
     ) {
         parent::__construct($context, $data);
 
-        $this->applepayConfig = $applepayConfig;
+        $this->cart = $cart;
+        $this->compositeConfigProvider = $compositeConfigProvider;
+        $this->applepayConfigProvider = $applepayConfigProvider;
+    }
+
+    /**
+     * @return bool
+     */
+    public function canShowButton()
+    {
+        $result = false;
+
+        if ($this->cart->getSummaryQty() && $this->applepayConfigProvider->getActive() != 0) {
+            $result = true;
+        }
+
+        return $result;
     }
 
     /**
@@ -59,6 +88,10 @@ class Applepay extends Template
      */
     public function getCheckoutConfig()
     {
-        return json_encode($this->applepayConfig->getConfig());
+        if (!$this->canShowButton()) {
+            return null;
+        }
+
+        return json_encode($this->compositeConfigProvider->getConfig(), JSON_HEX_TAG);
     }
 }
