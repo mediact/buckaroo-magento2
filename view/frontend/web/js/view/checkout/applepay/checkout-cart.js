@@ -44,8 +44,6 @@ define(
         'use strict';
 
         return {
-            quote : null,
-
             showPayButton: function () {
                 applepayPay.setQuote(quote);
                 applepayPay.showPayButton();
@@ -56,11 +54,7 @@ define(
                         orderHandler.placeOrder();
                     }.bind(this)
                 );
-            },
-
-            setQuote: function (setQuote) {
-                this.quote = setQuote;
-            },
+            }
         };
     }
 );

@@ -36,6 +36,7 @@ define(
         'Magento_Checkout/js/model/quote',
         'Magento_Checkout/js/action/create-shipping-address',
         'Magento_Checkout/js/action/select-shipping-address',
+        'Magento_Checkout/js/action/select-shipping-method',
         'Magento_Checkout/js/action/select-billing-address',
         'Magento_Checkout/js/model/shipping-save-processor/payload-extender',
         'Magento_Checkout/js/checkout-data'
@@ -47,6 +48,7 @@ define(
         quote,
         createShippingAddress,
         selectShippingAddress,
+        selectShippingMethod,
         selectBillingAddress,
         payloadExtender,
         checkoutData
@@ -61,6 +63,13 @@ define(
                 selectShippingAddress(newShippingAddress);
                 checkoutData.setSelectedShippingAddress(newShippingAddress.getKey());
                 checkoutData.setNewCustomerShippingAddress($.extend(true, {}, addressData));
+
+                return newShippingAddress;
+            },
+
+            selectShippingMethod: function (newMethod) {
+                selectShippingMethod(newMethod);
+                checkoutData.setSelectedShippingRate(newMethod['carrier_code'] + '_' + newMethod['method_code']);
             },
 
             saveShipmentInfo: function () {
@@ -94,11 +103,17 @@ define(
             },
 
             getAddressData: function (address) {
+                var street = address.addressLines;
+
+                if (street instanceof Array) {
+                    street = street.join(' ');
+                }
+
                 var addressData = {
                     firstname: address.givenName,
                     lastname: address.familyName,
                     comapny: '',
-                    street: [address.addressLines.join(' ')],
+                    street: [street],
                     city: address.locality,
                     postcode: address.postalCode,
                     region: address.administrativeArea,

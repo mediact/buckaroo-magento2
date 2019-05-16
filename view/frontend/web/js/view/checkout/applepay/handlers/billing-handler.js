@@ -63,6 +63,8 @@ define(
                 selectBillingAddress(newBillingAddress);
                 checkoutData.setSelectedBillingAddress(newBillingAddress.getKey());
                 checkoutData.setNewCustomerBillingAddress($.extend(true, {}, addressData));
+
+                return newBillingAddress;
             },
 
             selectPaymentMethod: function (paymentMethodData) {
@@ -110,11 +112,17 @@ define(
             },
 
             getAddressData: function (address) {
+                var street = address.addressLines;
+
+                if (street instanceof Array) {
+                    street = street.join(' ');
+                }
+
                 var addressData = {
                     firstname: address.givenName,
                     lastname: address.familyName,
                     comapny: '',
-                    street: [address.addressLines.join(' ')],
+                    street: [street],
                     city: address.locality,
                     postcode: address.postalCode,
                     region: address.administrativeArea,

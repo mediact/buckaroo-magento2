@@ -34,10 +34,7 @@ define(
         'ko',
         'mage/url',
         'Magento_Checkout/js/model/resource-url-manager',
-        'Magento_Checkout/js/action/create-shipping-address',
-        'Magento_Checkout/js/action/select-shipping-address',
-        'Magento_Checkout/js/action/select-shipping-method',
-        'Magento_Checkout/js/checkout-data',
+        'buckaroo/applepay/shipping-handler',
         'Magento_Checkout/js/model/shipping-rate-service',
         'mage/translate',
         'BuckarooSDK'
@@ -47,10 +44,7 @@ define(
         ko,
         urlBuilder,
         resourceUrlManager,
-        createShippingAddress,
-        selectShippingAddress,
-        selectShippingMethod,
-        checkoutData,
+        shippingHandler
     ) {
         'use strict';
 
@@ -113,15 +107,10 @@ define(
                     shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
                 }
 
-                if (typeof this.quote.totals() === 'undefined') {
-                    this.quote.totals(window.checkoutConfig.quoteData);
-                    this.quote.totals().shipping_incl_tax = 0;
-                }
-
                 this.applepayOptions = new BuckarooSdk.ApplePay.ApplePayOptions(
                     window.checkoutConfig.payment.buckaroo.applepay.storeName,
                     country,
-                    window.checkoutConfig.quoteData.quote_currency_code,
+                    window.checkoutConfig.payment.buckaroo.applepay.currency,
                     window.checkoutConfig.payment.buckaroo.applepay.cultureCode,
                     window.checkoutConfig.payment.buckaroo.applepay.guid,
                     self.processLineItems(),
@@ -138,8 +127,13 @@ define(
              * @returns {{amount: string, label, type: string}[]}
              */
             processLineItems: function () {
-                var subTotal = parseFloat(this.quote.totals().subtotal).toFixed(2);
-                var shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
+                var subTotal = '0.00';
+                var shippingInclTax = '0.00';
+
+                if (typeof this.quote.totals() !== 'undefined') {
+                    subTotal = parseFloat(this.quote.totals().subtotal).toFixed(2);
+                    shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
+                }
 
                 return [
                     {label: $.mage.__('Subtotal'), amount: subTotal, type: 'final'},
@@ -151,8 +145,12 @@ define(
              * @returns {{amount: string, label: *, type: string}}
              */
             processTotalLineItems: function () {
-                var grandTotal = parseFloat(this.quote.totals().grand_total).toFixed(2);
+                var grandTotal = '0.00';
                 var storeName = window.checkoutConfig.payment.buckaroo.applepay.storeName;
+
+                if (typeof this.quote.totals() !== 'undefined') {
+                    grandTotal = parseFloat(this.quote.totals().grand_total).toFixed(2);
+                }
 
                 return {label: storeName, amount: grandTotal, type: 'final'};
             },
@@ -195,13 +193,7 @@ define(
 
             onSelectedShipmentMethod: function (event) {
                 var newShippingMethod = this.shippingGroups[event.identifier];
-
-                selectShippingMethod(newShippingMethod);
-                checkoutData.setSelectedShippingRate(newShippingMethod['carrier_code'] + '_' + newShippingMethod['method_code']);
-
-                var subtotal = this.quote.totals().subtotal;
-                this.quote.totals().shipping_incl_tax = newShippingMethod['price_incl_tax'];
-                this.quote.totals().grand_total = subtotal + newShippingMethod['price_incl_tax'];
+                this.updateQuoteRate(newShippingMethod);
 
                 var authorizationResult = {
                     newTotal: this.processTotalLineItems(),
@@ -212,7 +204,7 @@ define(
             },
 
             onSelectedShippingContact: function (event) {
-                var newShippingAddress = this.setNewQuoteAddress(event);
+                var newShippingAddress = shippingHandler.setShippingAddress(event);
                 this.updateShippingMethods(newShippingAddress);
 
                 var authorizationResult = {
@@ -223,29 +215,6 @@ define(
                 };
 
                 return Promise.resolve(authorizationResult);
-            },
-
-            setNewQuoteAddress: function (address) {
-                var addressData = {
-                    firstname: address.givenName,
-                    lastname: address.familyName,
-                    comapny: '',
-                    street: [''],
-                    city: address.locality,
-                    postcode: address.postalCode,
-                    region: address.administrativeArea,
-                    region_id: '',
-                    country_id: address.countryCode,
-                    telephone: '',
-                    save_in_address_book: 0
-                };
-
-                var newShippingAddress = createShippingAddress(addressData);
-                selectShippingAddress(newShippingAddress);
-                checkoutData.setSelectedShippingAddress(newShippingAddress.getKey());
-                checkoutData.setNewCustomerShippingAddress($.extend(true, {}, addressData));
-
-                return newShippingAddress;
             },
 
             updateShippingMethods: function (address) {
@@ -282,17 +251,19 @@ define(
                         this.shippingGroups[rate['method_code']] = rate;
 
                         if (firstLoop) {
-                            selectShippingMethod(rate);
-                            checkoutData.setSelectedShippingRate(rate['carrier_code'] + '_' + rate['method_code']);
-
-                            var subtotal = this.quote.totals().subtotal;
-                            this.quote.totals().shipping_incl_tax = rate['price_incl_tax'];
-                            this.quote.totals().grand_total = subtotal + rate['price_incl_tax'];
-
+                            this.updateQuoteRate(rate);
                             firstLoop = false;
                         }
                     }.bind(this));
                 }.bind(this));
+            },
+
+            updateQuoteRate: function (newRate) {
+                shippingHandler.selectShippingMethod(newRate);
+
+                var subtotal = this.quote.totals().subtotal;
+                this.quote.totals().shipping_incl_tax = newRate['price_incl_tax'];
+                this.quote.totals().grand_total = subtotal + newRate['price_incl_tax'];
             },
 
             /**
@@ -307,9 +278,6 @@ define(
 
                 this.transactionResult(payment);
 
-                $('#debug-wrapper').removeClass('d-none');
-                $('#debug').html(JSON.stringify(payment));
-
                 if (authorizationResult.status !== ApplePaySession.STATUS_SUCCESS) {
                     var errors = authorizationResult.errors.map(function (error) {
                         return error.message
@@ -323,29 +291,6 @@ define(
                 }
 
                 return Promise.resolve(authorizationResult)
-            },
-
-            /**
-             * @param response
-             * @returns {string}
-             */
-            formatPaymentResponse: function (response) {
-                var paymentData = response.token.paymentData;
-
-                var formattedData = {
-                    "paymentData": {
-                        "version": paymentData.version,
-                        "data": paymentData.data,
-                        "signature": paymentData.signature,
-                        "header": {
-                            "ephemeralPublicKey": paymentData.header.ephemeralPublicKey,
-                            "publicKeyHash": paymentData.header.publicKeyHash,
-                            "transactionId": paymentData.header.transactionId,
-                        }
-                    }
-                };
-
-                return JSON.stringify(formattedData);
             }
         };
     }

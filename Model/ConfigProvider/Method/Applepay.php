@@ -103,6 +103,7 @@ class Applepay extends AbstractConfigProvider
 
         $store = $this->storeManager->getStore();
         $storeName = $store->getName();
+        $currency = $store->getCurrentCurrency()->getCode();
 
         $localeCode = $this->localeResolver->getLocale();
         $shortLocale = explode('_', $localeCode)[0];
@@ -114,6 +115,7 @@ class Applepay extends AbstractConfigProvider
                         'paymentFeeLabel' => $paymentFeeLabel,
                         'allowedCurrencies' => $this->getAllowedCurrencies(),
                         'storeName' => $storeName,
+                        'currency' => $currency,
                         'cultureCode' => $shortLocale,
                         'guid' => $this->configProvicerAccount->getMerchantGuid(),
                     ],
