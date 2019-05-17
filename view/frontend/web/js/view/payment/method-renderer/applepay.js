@@ -40,7 +40,8 @@ define(
         'ko',
         'Magento_Checkout/js/checkout-data',
         'Magento_Checkout/js/action/select-payment-method',
-        'buckaroo/applepay/pay'
+        'buckaroo/applepay/pay',
+        'BuckarooSDK'
     ],
     function (
         $,
@@ -86,6 +87,10 @@ define(
 
                     return this;
                 },
+
+                canShowPaymentMethod: ko.computed(function () {
+                    return applepayPay.canShowApplePay();
+                }),
 
                 /**
                  * Place order.

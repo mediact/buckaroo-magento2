@@ -52,6 +52,7 @@ define(
 
         return {
             transactionResult : transactionResult,
+            canShowMethod: ko.observable(null),
             applepayOptions : null,
             isOnCheckout : false,
             quote : null,
@@ -72,6 +73,16 @@ define(
                         }
                     }.bind(this)
                 );
+            },
+
+            canShowApplePay:function () {
+                BuckarooSdk.ApplePay.checkApplePaySupport(window.checkoutConfig.payment.buckaroo.applepay.guid).then(
+                    function (applePaySupported) {
+                        this.canShowMethod(applePaySupported);
+                    }.bind(this)
+                );
+
+                return this.canShowMethod();
             },
 
             /**
