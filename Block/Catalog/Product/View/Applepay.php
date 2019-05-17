@@ -94,4 +94,12 @@ class Applepay extends Template
 
         return json_encode($this->compositeConfigProvider->getConfig(), JSON_HEX_TAG);
     }
+
+    /**
+     * @return false|string
+     */
+    public function getApplepayConfig()
+    {
+        return json_encode($this->applepayConfigProvider->getConfig());
+    }
 }

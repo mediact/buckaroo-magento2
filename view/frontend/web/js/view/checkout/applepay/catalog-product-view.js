@@ -31,29 +31,27 @@
 define(
     [
         'jquery',
-        'mageUtils',
-        'mage/url',
+        'uiComponent',
+        'Magento_Checkout/js/model/quote',
         'buckaroo/applepay/pay'
     ],
     function (
         $,
-        utils,
-        url,
+        Component,
+        quote,
         applepayPay
     ) {
         'use strict';
 
-        return {
-            quote : null,
-
+        return Component.extend({
             showPayButton: function () {
                 // applepayPay.setQuote(quote);
                 applepayPay.showPayButton();
             },
 
-            setQuote: function (setQuote) {
-                this.quote = setQuote;
-            },
-        };
+            addProductToCart: function () {
+                $('#product-addtocart-button').click();
+            }
+        });
     }
 );

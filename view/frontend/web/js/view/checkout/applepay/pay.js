@@ -90,9 +90,10 @@ define(
 
             generateApplepayOptions: function () {
                 var self = this;
-                var shippingMethods = null;
-                var shippingContactCallback = null;
-                var shipmentMethodCallback = null;
+                var shippingMethods = self.availableShippingMethodInformation();
+                var shippingContactCallback = self.onSelectedShippingContact.bind(this);
+                var shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
+                var requiredContactFields = void 0;
 
                 var country = window.checkoutConfig.payment.buckaroo.applepay.cultureCode.toUpperCase();
                 if (null !== this.quote.shippingAddress()) {
@@ -100,11 +101,10 @@ define(
                 }
 
                 if (this.isOnCheckout) {
-                    shippingMethods = self.quoteShippingMethodInformation();
-                } else {
-                    shippingMethods = self.availableShippingMethodInformation();
-                    shippingContactCallback = self.onSelectedShippingContact.bind(this);
-                    shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
+                    shippingMethods = [];
+                    shippingContactCallback = null;
+                    shipmentMethodCallback = null;
+                    requiredContactFields = [];
                 }
 
                 this.applepayOptions = new BuckarooSdk.ApplePay.ApplePayOptions(
@@ -119,7 +119,9 @@ define(
                     shippingMethods,
                     self.captureFunds.bind(this),
                     shipmentMethodCallback,
-                    shippingContactCallback
+                    shippingContactCallback,
+                    requiredContactFields,
+                    requiredContactFields
                 );
             },
 
@@ -153,25 +155,6 @@ define(
                 }
 
                 return {label: storeName, amount: grandTotal, type: 'final'};
-            },
-
-            /**
-             * @returns {{identifier: (string), amount: string, label: string, detail}[]}
-             */
-            quoteShippingMethodInformation: function () {
-                if (null === this.quote.shippingMethod()) {
-                    return [];
-                }
-
-                var shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
-                var shippingTitle = this.quote.shippingMethod().carrier_title + ' (' + this.quote.shippingMethod().method_title + ')';
-
-                return [{
-                    label: shippingTitle,
-                    amount: shippingInclTax,
-                    identifier: this.quote.shippingMethod().method_code,
-                    detail: $.mage.__('Shipping Method selected during checkout.')
-                }];
             },
 
             availableShippingMethodInformation: function () {

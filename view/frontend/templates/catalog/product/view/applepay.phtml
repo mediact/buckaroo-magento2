@@ -30,22 +30,30 @@
  * @license     http://creativecommons.org/licenses/by-nc-nd/3.0/nl/deed.en_US
  */
 ?>
-<div class="box-tocart">
-    <div class="fieldset">
-        <div class="actions">
-            <div id="apple-pay-wrapper" data-bind="afterRender: showPayButton"></div>
-        </div>
-    </div>
+<div id="apple-pay-catalog-product-view-component" data-bind="scope:'applepayproductcomponent'">
+    <!-- ko template: getTemplate() --><!-- /ko -->
+
+    <script>
+        if ('undefined' === typeof window.checkoutConfig) {
+            // window.checkoutConfig = {};
+            window.checkoutConfig = <?php echo $this->getApplepayConfig(); ?>;
+            // window.isCustomerLoggedIn = window.checkoutConfig.isCustomerLoggedIn;
+            // window.customerData = window.checkoutConfig.customerData;
+        }
+    </script>
+
+    <script type="text/x-magento-init">
+        {
+            "#apple-pay-catalog-product-view-component": {
+                "Magento_Ui/js/core/app": {
+                    "components": {
+                        "applepayproductcomponent": {
+                            "component":"buckaroo/applepay/catalog-product-view",
+                            "template":"TIG_Buckaroo/catalog/product/view/applepay"
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </div>
-
-<script>
-    require(['jquery', 'buckaroo/applepay/catalog-product-view'], function (jQuery, applepayPay) {
-        if ('undefined' === window.checkoutConfig) {
-            window.checkoutConfig = <?php echo $this->getCheckoutConfig(); ?>;
-        }
-
-        showPayButton = function() {
-            applepayPay.showPayButton();
-        }
-    });
-</script>
