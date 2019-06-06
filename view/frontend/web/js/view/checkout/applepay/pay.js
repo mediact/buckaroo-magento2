@@ -69,7 +69,7 @@ define(
                             this.generateApplepayOptions();
 
                             var payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', this.applepayOptions);
-                            payment.showPayButton('black');
+                            payment.showPayButton('black', 'buy');
                         }
                     }.bind(this)
                 );
