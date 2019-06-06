@@ -119,7 +119,7 @@ define(
                     region: address.administrativeArea,
                     region_id: 0,
                     country_id: address.countryCode,
-                    telephone: '0201234567',
+                    telephone: address.phoneNumber,
                     email: address.emailAddress,
                     save_in_address_book: 0,
                 };

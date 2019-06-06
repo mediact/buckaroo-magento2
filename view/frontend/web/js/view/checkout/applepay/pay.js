@@ -104,11 +104,15 @@ define(
                 var shippingMethods = self.availableShippingMethodInformation();
                 var shippingContactCallback = self.onSelectedShippingContact.bind(this);
                 var shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
-                var requiredContactFields = void 0;
+                var requiredContactFields = ["name", "postalAddress", "phone"];
 
                 var country = window.checkoutConfig.payment.buckaroo.applepay.cultureCode.toUpperCase();
                 if (null !== this.quote.shippingAddress()) {
                     country = this.quote.shippingAddress().countryId;
+                }
+
+                if (!this.isOnCheckout && !window.isCustomerLoggedIn) {
+                    requiredContactFields.push("email");
                 }
 
                 if (this.isOnCheckout) {

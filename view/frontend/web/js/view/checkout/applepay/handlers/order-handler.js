@@ -55,9 +55,15 @@ define(
             placeOrder: function () {
                 quote.guestEmail = this.applepayTransaction.shippingContact.emailAddress;
 
-                shippingHandler.setShippingAddress(this.applepayTransaction.shippingContact);
+                var shipingAddress = this.applepayTransaction.shippingContact;
+                var billingAddress = this.applepayTransaction.billingContact;
+
+                billingAddress.emailAddress = shipingAddress.emailAddress;
+                billingAddress.phoneNumber = shipingAddress.phoneNumber;
+
+                shippingHandler.setShippingAddress(shipingAddress);
                 shippingHandler.saveShipmentInfo();
-                billingHandler.setBillingAddress(this.applepayTransaction.billingContact, this.applepayTransaction.shippingContact.emailAddress);
+                billingHandler.setBillingAddress(billingAddress);
                 billingHandler.selectPaymentMethod(this.getData());
                 billingHandler.savePaymentInfo();
 
