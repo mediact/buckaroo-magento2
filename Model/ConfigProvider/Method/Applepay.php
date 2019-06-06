@@ -42,8 +42,6 @@ use TIG\Buckaroo\Model\ConfigProvider\AllowedCurrencies;
 
 class Applepay extends AbstractConfigProvider
 {
-    const XPATH_APPLEPAY_PAYMENT_FEE           = 'payment/tig_buckaroo_applepay/payment_fee';
-    const XPATH_APPLEPAY_PAYMENT_FEE_LABEL     = 'payment/tig_buckaroo_applepay/payment_fee_label';
     const XPATH_APPLEPAY_ACTIVE                = 'payment/tig_buckaroo_applepay/active';
     const XPATH_APPLEPAY_ACTIVE_STATUS         = 'payment/tig_buckaroo_applepay/active_status';
     const XPATH_APPLEPAY_ORDER_STATUS_SUCCESS  = 'payment/tig_buckaroo_applepay/order_status_success';
@@ -99,8 +97,6 @@ class Applepay extends AbstractConfigProvider
             return [];
         }
 
-        $paymentFeeLabel = $this->getBuckarooPaymentFeeLabel(\TIG\Buckaroo\Model\Method\Applepay::PAYMENT_METHOD_CODE);
-
         $store = $this->storeManager->getStore();
         $storeName = $store->getName();
         $currency = $store->getCurrentCurrency()->getCode();
@@ -112,7 +108,6 @@ class Applepay extends AbstractConfigProvider
             'payment' => [
                 'buckaroo' => [
                     'applepay' => [
-                        'paymentFeeLabel' => $paymentFeeLabel,
                         'allowedCurrencies' => $this->getAllowedCurrencies(),
                         'storeName' => $storeName,
                         'currency' => $currency,
@@ -122,21 +117,5 @@ class Applepay extends AbstractConfigProvider
                 ],
             ],
         ];
-    }
-
-    /**
-     * @param null|int $storeId
-     *
-     * @return float
-     */
-    public function getPaymentFee($storeId = null)
-    {
-        $paymentFee = $this->scopeConfig->getValue(
-            self::XPATH_APPLEPAY_PAYMENT_FEE,
-            ScopeInterface::SCOPE_STORE,
-            $storeId
-        );
-
-        return $paymentFee ? $paymentFee : false;
     }
 }

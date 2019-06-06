@@ -54,9 +54,9 @@ class ApplepayTest extends BaseTest
                     'payment' => [
                         'buckaroo' => [
                             'applepay' => [
-                                'paymentFeeLabel' => 'Fee',
                                 'allowedCurrencies' => ['EUR'],
                                 'storeName' => 'TIG Webshop',
+                                'currency' => 'EUR',
                                 'cultureCode' => 'nl',
                                 'guid' => 'GUID12345'
                             ]
@@ -95,17 +95,13 @@ class ApplepayTest extends BaseTest
             $expectedCount = 1;
         }
 
-        $paymentFeeMock = $this->getFakeMock(PaymentFee::class)->setMethods(['getBuckarooPaymentFeeLabel'])->getMock();
-        $paymentFeeMock->expects($this->exactly($expectedCount))
-            ->method('getBuckarooPaymentFeeLabel')
-            ->with(ApplepayMethod::PAYMENT_METHOD_CODE)
-            ->willReturn('Fee');
-
         $storeManagerMock = $this->getFakeMock(StoreManagerInterface::class)
-            ->setMethods(['getStore', 'getName'])
+            ->setMethods(['getStore', 'getName', 'getCurrentCurrency', 'getCode'])
             ->getMockForAbstractClass();
         $storeManagerMock->expects($this->exactly($expectedCount))->method('getStore')->willReturnSelf();
         $storeManagerMock->expects($this->exactly($expectedCount))->method('getName')->willReturn('TIG Webshop');
+        $storeManagerMock->expects($this->exactly($expectedCount))->method('getCurrentCurrency')->willReturnSelf();
+        $storeManagerMock->expects($this->exactly($expectedCount))->method('getCode')->willReturn('EUR');
 
         $localeResolverMock = $this->getFakeMock(Resolver::class)->setMethods(['getLocale'])->getMock();
         $localeResolverMock->expects($this->exactly($expectedCount))->method('getLocale')->willReturn('nl_NL');
@@ -115,73 +111,12 @@ class ApplepayTest extends BaseTest
 
         $instance = $this->getInstance([
             'scopeConfig' => $scopeConfigMock,
-            'paymentFeeHelper' => $paymentFeeMock,
             'storeManager' => $storeManagerMock,
             'localeResolver' => $localeResolverMock,
             'configProvicerAccount' => $accountConfigMock
         ]);
 
         $result = $instance->getConfig();
-        $this->assertEquals($expected, $result);
-    }
-
-    public function getPaymentFeeProvider()
-    {
-        return [
-            'null value' => [
-                null,
-                false
-            ],
-            'false value' => [
-                false,
-                false
-            ],
-            'empty int value' => [
-                0,
-                false
-            ],
-            'empty float value' => [
-                0.00,
-                false
-            ],
-            'empty string value' => [
-                '',
-                false
-            ],
-            'int value' => [
-                1,
-                1
-            ],
-            'float value' => [
-                2.34,
-                2.34
-            ],
-            'string value' => [
-                '5.67',
-                5.67
-            ],
-        ];
-    }
-
-    /**
-     * @param $value
-     * @param $expected
-     *
-     * @dataProvider getPaymentFeeProvider
-     */
-    public function testGetPaymentFee($value, $expected)
-    {
-        $scopeConfigMock = $this->getFakeMock(ScopeConfigInterface::class)
-            ->setMethods(['getValue'])
-            ->getMockForAbstractClass();
-        $scopeConfigMock->expects($this->once())
-            ->method('getValue')
-            ->with(Applepay::XPATH_APPLEPAY_PAYMENT_FEE, ScopeInterface::SCOPE_STORE)
-            ->willReturn($value);
-
-        $instance = $this->getInstance(['scopeConfig' => $scopeConfigMock]);
-        $result = $instance->getPaymentFee();
-
         $this->assertEquals($expected, $result);
     }
 }
