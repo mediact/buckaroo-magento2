@@ -31,8 +31,7 @@
 var config = {
     map: {
         '*': {
-            // "BuckarooSDK": "//checkout.buckaroo.nl/api/buckaroosdk/script",
-            "BuckarooSDK": "TIG_Buckaroo/js/view/checkout/applepay/sdk",
+            "BuckarooSDK": "//checkout.buckaroo.nl/api/buckaroosdk/script",
             "buckaroo/applepay/catalog-product-view": "TIG_Buckaroo/js/view/checkout/applepay/catalog-product-view",
             "buckaroo/applepay/checkout-cart": "TIG_Buckaroo/js/view/checkout/applepay/checkout-cart",
             "buckaroo/applepay/pay": "TIG_Buckaroo/js/view/checkout/applepay/pay",
