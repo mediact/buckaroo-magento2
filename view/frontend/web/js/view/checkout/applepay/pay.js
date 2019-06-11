@@ -154,7 +154,7 @@ define(
 
                 return [
                     {label: $.mage.__('Subtotal'), amount: subTotal, type: 'final'},
-                    {label: $.mage.__('Delivery'), amount: shippingInclTax, type: 'final'}
+                    {label: $.mage.__('Delivery costs'), amount: shippingInclTax, type: 'final'}
                 ];
             },
 
