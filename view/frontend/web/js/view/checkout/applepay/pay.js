@@ -101,6 +101,7 @@ define(
 
             generateApplepayOptions: function () {
                 var self = this;
+                var lineItemsType = 'pending';
                 var shippingMethods = self.availableShippingMethodInformation();
                 var shippingContactCallback = self.onSelectedShippingContact.bind(this);
                 var shipmentMethodCallback = self.onSelectedShipmentMethod.bind(this);
@@ -116,6 +117,7 @@ define(
                 }
 
                 if (this.isOnCheckout) {
+                    lineItemsType = 'final';
                     shippingMethods = [];
                     shippingContactCallback = null;
                     shipmentMethodCallback = null;
@@ -128,8 +130,8 @@ define(
                     window.checkoutConfig.payment.buckaroo.applepay.currency,
                     window.checkoutConfig.payment.buckaroo.applepay.cultureCode,
                     window.checkoutConfig.payment.buckaroo.applepay.guid,
-                    self.processLineItems(),
-                    self.processTotalLineItems(),
+                    self.processLineItems(lineItemsType),
+                    self.processTotalLineItems(lineItemsType),
                     "shipping",
                     shippingMethods,
                     self.captureFunds.bind(this),
@@ -141,35 +143,72 @@ define(
             },
 
             /**
+             * @param type
+             *
              * @returns {{amount: string, label, type: string}[]}
              */
-            processLineItems: function () {
+            processLineItems: function (type = 'final') {
                 var subTotal = '0.00';
                 var shippingInclTax = '0.00';
+                var totals = this.getQuoteTotals();
 
-                if (typeof this.quote.totals() !== 'undefined') {
-                    subTotal = parseFloat(this.quote.totals().subtotal).toFixed(2);
-                    shippingInclTax = parseFloat(this.quote.totals().shipping_incl_tax).toFixed(2);
+                if ('subtotal' in totals && 'shipping' in totals) {
+                    subTotal = parseFloat(totals['subtotal']).toFixed(2);
+                    shippingInclTax = parseFloat(totals['shipping']).toFixed(2);
                 }
 
                 return [
-                    {label: $.mage.__('Subtotal'), amount: subTotal, type: 'final'},
-                    {label: $.mage.__('Delivery costs'), amount: shippingInclTax, type: 'final'}
+                    {label: $.mage.__('Subtotal'), amount: subTotal, type: type},
+                    {label: $.mage.__('Delivery costs'), amount: shippingInclTax, type: type}
                 ];
             },
 
             /**
+             * @param type
+             *
              * @returns {{amount: string, label: *, type: string}}
              */
-            processTotalLineItems: function () {
+            processTotalLineItems: function (type = 'final') {
                 var grandTotal = '0.00';
                 var storeName = window.checkoutConfig.payment.buckaroo.applepay.storeName;
+                var totals = this.getQuoteTotals();
 
-                if (typeof this.quote.totals() !== 'undefined') {
-                    grandTotal = parseFloat(this.quote.totals().grand_total).toFixed(2);
+                if ('grand_total' in totals) {
+                    grandTotal = parseFloat(totals['grand_total']).toFixed(2);
                 }
 
-                return {label: storeName, amount: grandTotal, type: 'final'};
+                return {label: storeName, amount: grandTotal, type: type};
+            },
+
+            /**
+             * @returns {Array}
+             */
+            getQuoteTotals: function () {
+                var totals = {};
+
+                if (typeof this.quote.totals() === 'undefined') {
+                    return totals;
+                }
+
+                totals['subtotal'] = this.quote.totals().subtotal_incl_tax;
+                totals['shipping'] = this.quote.totals().shipping_incl_tax;
+                totals['grand_total'] = this.quote.totals().grand_total;
+
+                var customGrandTotal = this.quote.totals().custom_grand_total;
+
+                if (customGrandTotal !== undefined && customGrandTotal) {
+                    return totals;
+                }
+
+                var segments = this.quote.totals().total_segments;
+
+                for (let i in segments) {
+                    if (segments[i]['code'] === 'grand_total') {
+                        totals['grand_total'] = segments[i]['value'];
+                    }
+                }
+
+                return totals;
             },
 
             availableShippingMethodInformation: function () {
@@ -259,9 +298,10 @@ define(
             updateQuoteRate: function (newRate) {
                 shippingHandler.selectShippingMethod(newRate);
 
-                var subtotal = this.quote.totals().subtotal;
+                var subtotal = this.quote.totals().subtotal_incl_tax;
                 this.quote.totals().shipping_incl_tax = newRate['price_incl_tax'];
                 this.quote.totals().grand_total = subtotal + newRate['price_incl_tax'];
+                this.quote.totals().custom_grand_total = true;
             },
 
             /**
