@@ -316,19 +316,7 @@ define(
 
                 this.transactionResult(payment);
 
-                if (authorizationResult.status !== ApplePaySession.STATUS_SUCCESS) {
-                    var errors = authorizationResult.errors.map(function (error) {
-                        return error.message
-                    });
-
-                    this.showError($.mage.__('Your payment could not be processed: ') + errors.join(' '));
-
-                    authorizationResult.errors.forEach(function (error) {
-                        console.error(error.message + ' (' + error.contactField + ': ' + error.code + ').');
-                    })
-                }
-
-                return Promise.resolve(authorizationResult)
+                return Promise.resolve(authorizationResult);
             }
         };
     }
