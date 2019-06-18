@@ -89,7 +89,7 @@ class Emandate extends AbstractMethod
     protected $_canCapturePartial       = false;
 
     /** @var bool */
-    protected $_canRefund               = true;
+    protected $_canRefund               = false;
 
     /** @var bool */
     protected $_canVoid                 = true;
@@ -101,7 +101,7 @@ class Emandate extends AbstractMethod
     protected $_canUseCheckout          = true;
 
     /** @var bool */
-    protected $_canRefundInvoicePartial = true;
+    protected $_canRefundInvoicePartial = false;
     // @codingStandardsIgnoreEnd
 
     /** @var EmandateConfig */
