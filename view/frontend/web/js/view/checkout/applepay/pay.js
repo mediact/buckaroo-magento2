@@ -57,6 +57,7 @@ define(
             isOnCheckout : false,
             quote : null,
             shippingGroups: {},
+            payment: null,
 
             showPayButton: function () {
                 if (typeof window.checkoutConfig === 'undefined') {
@@ -68,11 +69,16 @@ define(
                         if (applePaySupported) {
                             this.generateApplepayOptions();
 
-                            var payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', this.applepayOptions);
-                            payment.showPayButton('black', 'buy');
+                            this.payment = new BuckarooSdk.ApplePay.ApplePayPayment('#apple-pay-wrapper', this.applepayOptions);
+                            this.payment.showPayButton('black', 'buy');
                         }
                     }.bind(this)
                 );
+            },
+
+            updateOptions: function () {
+                this.generateApplepayOptions();
+                this.payment.options = this.applepayOptions;
             },
 
             canShowApplePay:function () {
