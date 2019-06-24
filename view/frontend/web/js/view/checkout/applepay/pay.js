@@ -77,6 +77,10 @@ define(
             },
 
             updateOptions: function () {
+                if (this.payment === null) {
+                    return;
+                }
+
                 this.generateApplepayOptions();
                 this.payment.options = this.applepayOptions;
             },

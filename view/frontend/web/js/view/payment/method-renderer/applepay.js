@@ -80,10 +80,10 @@ define(
                         }.bind(this)
                     );
 
-                    $(window).hashchange(function () {
+                    $(window).on('hashchange', function () {
                         var hashString = window.location.hash.replace('#', '');
 
-                        if (hashString === 'payment') {
+                        if (hashString === 'payment' && applepayPay.canShowApplePay()) {
                             applepayPay.updateOptions();
                         }
                     }.bind(this));
