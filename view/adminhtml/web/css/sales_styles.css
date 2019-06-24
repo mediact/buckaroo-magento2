@@ -260,7 +260,7 @@
 
 /* Apple Pay */
 .tig_buckaroo_payment_applepay:before {
-    /*background: url(../images/tig_buckaroo_ideal_title.png) no-repeat;*/
+    background: url(../images/tig_buckaroo_applepay_title.png) no-repeat;
     float: left;
     margin-right: 10px;
     margin-top: -3px;
