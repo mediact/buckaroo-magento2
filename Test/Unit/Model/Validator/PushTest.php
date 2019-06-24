@@ -38,6 +38,13 @@ class PayPerEmailTest extends BaseTest
 {
     protected $instanceClass = Push::class;
 
+    public function testValidate()
+    {
+        $instance = $this->getInstance();
+        $result = $instance->validate(null);
+        $this->assertTrue($result);
+    }
+
     /**
      * @return array
      */
