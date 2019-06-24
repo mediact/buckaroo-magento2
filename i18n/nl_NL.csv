@@ -102,6 +102,9 @@
 "(Merchant) key","(Merchant) key"
 "Enter your Buckaroo merchant/website key.","Voeg uw Buckaroo merchant/website key toe."
 "The (Merchant) Key can be retrieved in Payment Plaza under My Buckaroo > Websites. For support contact Buckaroo.","De '(Merchant)Key' staat weergegeven in Payment Plaza onder Mijn Buckaroo > Websites."
+"(Merchant) guid","(Merchant) guid"
+"Enter your Buckaroo merchant guid.","Voeg uw Buckaroo merchant guid toe."
+"The (Merchant) Guid can be retrieved in Payment Plaza under My Buckaroo > Details > Guid. For support contact Buckaroo.",""De '(Merchant) Guid' staat weergegeven in Payment Plaza onder Mijn Buckaroo > Details > Guid."
 "Transaction label","Transactie label"
 "The transaction description in Payment Plaza.","De omschrijving van de transactie in Payment Plaza."
 "Certificate label","Certificaat label"
@@ -390,3 +393,6 @@
 "Select a card","Kies een kaart"
 "Select a month","Kies een maand"
 "Select a year","Kies een jaar"
+"Enable Apple Pay","Apple Pay inschakelen"
+"Your payment could not be processed","Uw betaling kon niet verwerkt worden"
+
