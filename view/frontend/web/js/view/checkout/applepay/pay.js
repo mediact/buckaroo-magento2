@@ -167,10 +167,17 @@ define(
                     shippingInclTax = parseFloat(totals['shipping']).toFixed(2);
                 }
 
-                return [
+                var lineItems = [
                     {label: $.mage.__('Subtotal'), amount: subTotal, type: type},
                     {label: $.mage.__('Delivery costs'), amount: shippingInclTax, type: type}
                 ];
+
+                if ('discount' in totals && totals['discount'] < 0) {
+                    var discountTotal = parseFloat(totals['discount']).toFixed(2);
+                    lineItems.push({label: $.mage.__('Discount'), amount: discountTotal, type: type});
+                }
+
+                return lineItems;
             },
 
             /**
@@ -201,6 +208,7 @@ define(
                 }
 
                 totals['subtotal'] = this.quote.totals().subtotal_incl_tax;
+                totals['discount'] = this.quote.totals().discount_amount;
                 totals['shipping'] = this.quote.totals().shipping_incl_tax;
                 totals['grand_total'] = this.quote.totals().grand_total;
 
