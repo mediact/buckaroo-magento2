@@ -80,6 +80,14 @@ define(
                         }.bind(this)
                     );
 
+                    quote.totals.subscribe(
+                        function () {
+                            if (applepayPay.canShowApplePay()) {
+                                applepayPay.updateOptions();
+                            }
+                        }.bind(this)
+                    );
+
                     $(window).on('hashchange', function () {
                         var hashString = window.location.hash.replace('#', '');
 
