@@ -40,6 +40,7 @@
 namespace TIG\Buckaroo\Model\Service\Plugin\PaypalSellersProtection;
 
 use TIG\Buckaroo\Model\ConfigProvider\Method\Paypal;
+use TIG\Buckaroo\Model\PaypalStateCodes;
 
 class Order
 {
@@ -48,13 +49,21 @@ class Order
      */
     protected $configProviderPaypal;
 
+
+    /**
+     * @var PaypalStateCodes
+     */
+    private $paypalStateCodes;
+
     /**
      * @param Paypal $configProviderPaypal
      */
     public function __construct(
-        Paypal $configProviderPaypal
+        Paypal $configProviderPaypal,
+        PaypalStateCodes $paypalStateCodes
     ) {
         $this->configProviderPaypal = $configProviderPaypal;
+        $this->paypalStateCodes = $paypalStateCodes;
     }
 
     /**
@@ -85,43 +94,71 @@ class Order
 
         $services = $result->getServices();
 
+        // Build ExtraInfo Request Parameter
+        $extraInfoRequestParameter = $this->getRequestParameter($shippingAddress);
+
+        // Build ExtraInfo Service
         $services = [
             $services,
             [
                 'Name'             => 'paypal',
                 'Action'           => 'ExtraInfo',
                 'Version'          => 1,
-                'RequestParameter' => [
-                    [
-                        '_' => $shippingAddress->getName(),
-                        'Name' => 'Name',
-                    ],
-                    [
-                        '_' => $shippingAddress->getStreetLine(1),
-                        'Name' => 'Street1',
-                    ],
-                    [
-                        '_' => $shippingAddress->getCity(),
-                        'Name' => 'CityName',
-                    ],
-                    [
-                        '_' => $shippingAddress->getPostcode(),
-                        'Name' => 'PostalCode',
-                    ],
-                    [
-                        '_' => $shippingAddress->getCountryId(),
-                        'Name' => 'Country',
-                    ],
-                    [
-                        '_' => 'TRUE',
-                        'Name' => 'AddressOverride',
-                    ],
-                ],
+                'RequestParameter' => $extraInfoRequestParameter,
             ]
         ];
 
         $result->setServices($services);
 
         return $result;
+    }
+
+
+    private function getRequestParameter($shippingAddress) {
+
+        $extraInfoRequestParameter = [
+            [
+                '_' => $shippingAddress->getName(),
+                'Name' => 'Name',
+            ],
+            [
+                '_' => $shippingAddress->getStreetLine(1),
+                'Name' => 'Street1',
+            ],
+            [
+                '_' => $shippingAddress->getCity(),
+                'Name' => 'CityName',
+            ],
+            [
+                '_' => $shippingAddress->getPostcode(),
+                'Name' => 'PostalCode',
+            ],
+            [
+                '_' => $shippingAddress->getCountryId(),
+                'Name' => 'Country',
+            ],
+            [
+                '_' => 'TRUE',
+                'Name' => 'AddressOverride',
+            ],
+        ];
+
+        $shippingRegion = $shippingAddress->getRegion();
+        if (isset($shippingRegion) && !empty($shippingRegion)) {
+
+            $twoCharacterShippingRegion = $this->paypalStateCodes->getCodeFromValue($shippingAddress->getCountryId(),
+                $shippingAddress->getRegion());
+
+            if ($twoCharacterShippingRegion) {
+                $shippingRegionArray = [
+                    '_' => $twoCharacterShippingRegion,
+                    'Name' => 'StateOrProvince',
+                ];
+
+                array_push($extraInfoRequestParameter, $shippingRegionArray);
+            }
+        }
+
+        return $extraInfoRequestParameter;
     }
 }
