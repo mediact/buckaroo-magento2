@@ -78,6 +78,7 @@
     <type name="Magento\Sales\Model\Order">
         <plugin name="tig_buckaroo_plugin_afterpay" type="TIG\Buckaroo\Model\Plugin\Method\Afterpay"/>
         <plugin name="tig_buckaroo_plugin_afterpay2" type="TIG\Buckaroo\Model\Plugin\Method\Afterpay2"/>
+        <plugin name="tig_buckaroo_plugin_emandate" type="TIG\Buckaroo\Model\Plugin\Method\Emandate"/>
         <plugin name="tig_buckaroo_plugin_klarna" type="TIG\Buckaroo\Model\Plugin\Method\Klarna"/>
     </type>
 
@@ -256,6 +257,10 @@
                 <item name="emandate" xsi:type="array">
                     <item name="type" xsi:type="string">emandate</item>
                     <item name="model" xsi:type="string">TIG\Buckaroo\Model\ConfigProvider\Method\Emandate</item>
+                </item>
+                <item name="applepay" xsi:type="array">
+                    <item name="type" xsi:type="string">applepay</item>
+                    <item name="model" xsi:type="string">TIG\Buckaroo\Model\ConfigProvider\Method\Applepay</item>
                 </item>
             </argument>
         </arguments>
