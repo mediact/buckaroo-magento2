@@ -88,7 +88,7 @@ class CapayableIn3 extends AbstractConfigProvider
     public function getPaymentFee($storeId = null)
     {
         $paymentFee = $this->scopeConfig->getValue(
-            self::XPATH_CAPAYABLE_PAYMENT_FEE,
+            self::XPATH_CAPAYABLEIN3_PAYMENT_FEE,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
             $storeId
         );

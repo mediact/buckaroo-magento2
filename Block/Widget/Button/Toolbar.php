@@ -74,7 +74,8 @@ class Toolbar
         'tig_buckaroo_kbc',
         'tig_buckaroo_klarna',
         'tig_buckaroo_emandate',
-        'tig_buckaroo_applepay'
+        'tig_buckaroo_applepay',
+        'tig_buckaroo_capayablein3'
     ];
 
     /**

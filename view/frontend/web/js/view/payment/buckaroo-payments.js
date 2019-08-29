@@ -147,6 +147,10 @@ define(
             {
                 type: 'tig_buckaroo_applepay',
                 component: 'TIG_Buckaroo/js/view/payment/method-renderer/applepay'
+            },
+            {
+                type: 'tig_buckaroo_capayablein3',
+                component: 'TIG_Buckaroo/js/view/payment/method-renderer/capayablein3'
             }
 
         );
