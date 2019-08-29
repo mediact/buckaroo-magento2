@@ -262,6 +262,10 @@
                     <item name="type" xsi:type="string">applepay</item>
                     <item name="model" xsi:type="string">TIG\Buckaroo\Model\ConfigProvider\Method\Applepay</item>
                 </item>
+                <item name="capayablein3" xsi:type="array">
+                    <item name="type" xsi:type="string">capayablein3</item>
+                    <item name="model" xsi:type="string">TIG\Buckaroo\Model\ConfigProvider\Method\CapayableIn3</item>
+                </item>
             </argument>
         </arguments>
     </type>
