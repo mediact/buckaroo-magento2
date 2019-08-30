@@ -45,6 +45,132 @@
             <!--/ko-->
         </div>
 
+        <div class="payment-method-second-col billing-address-form">
+            <form data-hasrequired="* Required Fields" data-bind="mageInit: { 'validation': [] }">
+                <fieldset class="fieldset payment">
+
+                    <div class="field required">
+                        <legend class="label"> <span data-bind="i18n: 'Salutation:'"> </span> </legend>
+                        <div class="control">
+                            <ul id="Saluation">
+                                <li>
+                                    <input type="radio" id="tig_buckaroo_capayablein3_genderSelectMan"
+                                           data-bind="
+                                                   value: '1',
+                                                   click: setSelectedGender.bind($data, '1'),
+                                                   attr: { 'data-validate': JSON.stringify({ 'required': true }) },
+                                                   checked: genderValidate
+                                                   "
+                                           class="field"
+                                           name="payment[tig_buckaroo_capayablein3][customer_gender]">
+                                    <label for="tig_buckaroo_capayablein3_genderSelectMan"> <span data-bind="i18n: 'Mr.' "> </span> </label>
+                                </li>
+                                <li>
+                                    <input type="radio" id="tig_buckaroo_capayablein3_genderSelectWoman"
+                                           data-bind="
+                                                   value: '2',
+                                                   click: setSelectedGender.bind($data, '2'),
+                                                   attr: { 'data-validate': JSON.stringify({ 'required': true }) },
+                                                   checked: genderValidate
+                                                    "
+                                           class="field"
+                                           name="payment[tig_buckaroo_capayablein3][customer_gender]">
+                                    <label for="tig_buckaroo_capayablein3_genderSelectWoman"> <span data-bind="i18n: 'Mrs.' "> </span> </label>
+                                </li>
+                            </ul>
+                            <div for="gender" generated="true" class="mage-error" id="gender-error" style="display: none;"><span data-bind="i18n: 'This is a required field.'"></span> </div>
+                        </div>
+                    </div>
+
+                    <div class="field required">
+                        <label class="label" for="tig_buckaroo_capayablein3_BillingName"> <span data-bind="i18n: 'Billing Name:'"> </span> </label>
+                        <div class="control">
+                            <input id="tig_buckaroo_capayablein3_BillingName"
+                                   class="input-text field"
+                                   type="text"
+                                   data-bind="
+                                           value: BillingName,
+                                           textInput: CustomerName()"
+                                   name="payment[tig_buckaroo_capayablein3][customer_billingName]"
+                                   disabled >
+                        </div>
+                    </div>
+
+                    <div class="field required">
+                        <label class="label" for="tig_buckaroo_capayablein3_DoB"> <span data-bind="i18n: 'Date of Birth:'"> </span> </label>
+                        <span><sup data-bind="i18n: '(DD/MM/YYYY)' "></sup></span>
+                        <div class="control">
+                            <input id="tig_buckaroo_capayablein3_DoB"
+                                   class="field"
+                                   type="text"
+                                   data-bind="
+                                           datepicker: {
+                                                storage: dateValidate,
+                                                options: {
+                                                    changeMonth: true,
+                                                    changeYear: true,
+                                                    yearRange: ((new Date()).getFullYear()-120) + ':' + (new Date()).getFullYear(),
+                                                    dateFormat: 'dd/mm/yy'
+                                                }
+                                           },
+                                           valueUpdate: 'blur',
+                                           value: dateValidate,
+                                           attr: { 'data-validate': JSON.stringify({ 'required': true })}"
+                                   name="payment[tig_buckaroo_capayablein3][customer_DoB]">
+                        </div>
+                        <div for="tig_buckaroo_capayablein3_DoB" generated="true" class="mage-error" id="dob-error" style="display: none;"><span data-bind="i18n: 'This is a required field.'"></span> </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label" for="tig_buckaroo_capayablein3_OrderAs"> <span data-bind="i18n: 'Order As:'"> </span> </label>
+                        <div class="control">
+                            <select id="tig_buckaroo_capayablein3_OrderAs"
+                                    data-bind="value: selectedOrderAs"
+                                    name="payment[tig_buckaroo_capayablein3][orderAs]">
+                                <option data-bind="i18n: 'Private'" value="1"></option>
+                                <option data-bind="i18n: 'Company'" value="2"></option>
+                                <option data-bind="i18n: 'One-man business'" value="3"></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ko if: selectedOrderAs() == 2 || selectedOrderAs() == 3 -->
+                    <div class="field required" >
+                        <label class="label" for="tig_buckaroo_capayablein3_COCNumber"> <span data-bind="i18n: 'COC Number:'"> </span> </label>
+                        <div class="control">
+                            <input id="tig_buckaroo_capayablein3_COCNumber"
+                                   name="payment[tig_buckaroo_capayablein3][COCNumber]"
+                                   class="input-text field"
+                                   type="text"
+                                   data-bind="
+                                       valueUpdate: 'keyup',
+                                       value: CocNumber,
+                                       attr: { 'data-validate': JSON.stringify({'required': true, 'minlength': 8}) }">
+                        </div>
+                    </div>
+
+                    <div class="field required" >
+                        <label class="label" for="tig_buckaroo_capayablein3_CompanyName"> <span data-bind="i18n: 'Company Name:'"> </span> </label>
+                        <div class="control">
+                            <input id="tig_buckaroo_capayablein3_CompanyName"
+                                   name="payment[tig_buckaroo_capayablein3][CompanyName]"
+                                   class="input-text field"
+                                   type="text"
+                                   data-bind="
+                                       valueUpdate: 'keyup',
+                                       value: CompanyName,
+                                       attr: { 'data-validate': JSON.stringify({'required': true, 'min-words': 1 })}">
+                        </div>
+                    </div>
+                    <!-- /ko -->
+
+                    <div class="field">
+                        <span data-bind="i18n: 'Please make sure all fields are filled in correctly before proceeding.' ">  </span>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+
         <div class="actions-toolbar">
             <div class="primary">
                 <button class="action primary checkout"
@@ -53,7 +179,7 @@
                         click: placeOrder,
                         attr: {title: $t('Place Order')},
                         enable: (getCode() == isChecked()),
-                        css: {disabled: !isPlaceOrderActionAllowed() }
+                        css: {disabled: !isPlaceOrderActionAllowed() || !buttoncheck() }
                         "
                         disabled>
                     <span data-bind="i18n: 'Place Order'"></span>

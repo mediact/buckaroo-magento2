@@ -36,6 +36,7 @@ define(
         'Magento_Checkout/js/view/payment/default',
         'Magento_Checkout/js/model/payment/additional-validators',
         'TIG_Buckaroo/js/action/place-order',
+        'Magento_Checkout/js/model/quote',
         'ko',
         'Magento_Checkout/js/checkout-data',
         'Magento_Checkout/js/action/select-payment-method'
@@ -45,6 +46,7 @@ define(
         Component,
         additionalValidators,
         placeOrderAction,
+        quote,
         ko,
         checkoutData,
         selectPaymentMethodAction
@@ -54,7 +56,17 @@ define(
         return Component.extend(
             {
                 defaults: {
-                    template: 'TIG_Buckaroo/payment/tig_buckaroo_capayablein3'
+                    template: 'TIG_Buckaroo/payment/tig_buckaroo_capayablein3',
+                    selectedGender : null,
+                    genderValidate : null,
+                    firstname : '',
+                    lastname : '',
+                    CustomerName : null,
+                    BillingName : null,
+                    dateValidate : null,
+                    selectedOrderAs : 1,
+                    CocNumber : null,
+                    CompanyName : null
                 },
                 paymentFeeLabel : window.checkoutConfig.payment.buckaroo.capayablein3.paymentFeeLabel,
                 currencyCode : window.checkoutConfig.quoteData.quote_currency_code,
@@ -69,6 +81,89 @@ define(
                     }
 
                     return this._super(options);
+                },
+
+                initObservable: function () {
+                    this._super().observe([
+                        'selectedGender',
+                        'genderValidate',
+                        'firstname',
+                        'lastname',
+                        'CustomerName',
+                        'BillingName',
+                        'dateValidate',
+                        'selectedOrderAs',
+                        'CocNumber',
+                        'CompanyName'
+                    ]);
+
+                    // Observe and store the selected gender
+                    var self = this;
+                    this.setSelectedGender = function (value) {
+                        self.selectedGender(value);
+                        return true;
+                    };
+
+                    /**
+                     * Observe customer first & lastname and bind them together, so they could appear in the frontend
+                     */
+                    this.updateBillingName = function(firstname, lastname) {
+                        this.firstName = firstname;
+                        this.lastName = lastname;
+
+                        this.CustomerName = ko.computed(
+                            function () {
+                                return this.firstName + " " + this.lastName;
+                            },
+                            this
+                        );
+
+                        this.BillingName(this.CustomerName());
+                    };
+
+                    if (quote.billingAddress()) {
+                        this.updateBillingName(quote.billingAddress().firstname, quote.billingAddress().lastname);
+                    }
+
+                    quote.billingAddress.subscribe(
+                        function(newAddress) {
+                            if (this.getCode() === this.isChecked() &&
+                                newAddress &&
+                                newAddress.getKey() &&
+                                (newAddress.firstname !== this.firstName || newAddress.lastname !== this.lastName)
+                            ) {
+                                this.updateBillingName(newAddress.firstname, newAddress.lastname);
+                            }
+                        }.bind(this)
+                    );
+
+                    /**
+                     * Validation on the input fields
+                     */
+                    var runValidation = function () {
+                        $('.' + this.getCode() + ' .payment [data-validate]').filter(':not([name*="agreement"])').valid();
+                        this.selectPaymentMethod();
+                    };
+
+                    this.genderValidate.subscribe(runValidation,this);
+                    this.dateValidate.subscribe(runValidation,this);
+                    this.CocNumber.subscribe(runValidation,this);
+                    this.CompanyName.subscribe(runValidation,this);
+
+                    this.buttoncheck = ko.computed(function () {
+                        var validation = this.selectedGender() !== null &&
+                            this.genderValidate() !== null &&
+                            this.BillingName() !== null &&
+                            this.dateValidate() !== null;
+
+                        if (this.selectedOrderAs() == 2 || this.selectedOrderAs() == 3) {
+                            validation = validation && this.CocNumber() !== null && this.CompanyName() !== null;
+                        }
+
+                        return (validation && this.validate());
+                    }, this);
+
+                    return this;
                 },
 
                 /**
@@ -112,6 +207,11 @@ define(
 
                     selectPaymentMethodAction(this.getData());
                     checkoutData.setSelectedPaymentMethod(this.item.method);
+
+                    if (quote.billingAddress()) {
+                        this.updateBillingName(quote.billingAddress().firstname, quote.billingAddress().lastname);
+                    }
+
                     return true;
                 },
 
@@ -125,8 +225,25 @@ define(
                     var text = $.mage.__('The transaction will be processed using %s.');
 
                     return text.replace('%s', this.baseCurrencyCode);
-                }
+                },
 
+                validate: function () {
+                    return $('.' + this.getCode() + ' .payment [data-validate]:not([name*="agreement"])').valid();
+                },
+
+                getData : function() {
+                    return {
+                        "method" : this.item.method,
+                        "additional_data": {
+                            "customer_gender" : this.genderValidate(),
+                            "customer_billingName" : this.BillingName(),
+                            "customer_DoB" : this.dateValidate(),
+                            "customer_orderAs" : this.selectedOrderAs(),
+                            "customer_cocnumber" : this.CocNumber(),
+                            "customer_companyName" : this.CompanyName()
+                        }
+                    };
+                }
             }
         );
     }

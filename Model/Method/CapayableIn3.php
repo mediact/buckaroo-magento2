@@ -32,6 +32,7 @@
 
 namespace TIG\Buckaroo\Model\Method;
 
+use Magento\Framework\DataObject;
 use Magento\Payment\Model\InfoInterface;
 use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Model\Order\Address;
@@ -70,6 +71,62 @@ class CapayableIn3 extends AbstractMethod
 
     /** @var bool */
     public $usesRedirect                = false;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function assignData(DataObject $data)
+    {
+        parent::assignData($data);
+
+        $data = $this->assignDataConvertToArray($data);
+        $additionalData = $data['additional_data'];
+
+        $this->assignCapayableData($additionalData);
+
+        return $this;
+    }
+
+    /**
+     * @param $data
+     *
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    private function assignCapayableData($data)
+    {
+        if (isset($data['customer_gender'])) {
+            $this->getInfoInstance()->setAdditionalInformation('customer_gender', $data['customer_gender']);
+        }
+
+        if (isset($data['customer_DoB'])) {
+            $this->getInfoInstance()->setAdditionalInformation('customer_DoB', $this->formatDob($data['customer_DoB']));
+        }
+
+        if (isset($data['customer_orderAs'])) {
+            $this->getInfoInstance()->setAdditionalInformation('customer_orderAs', $data['customer_orderAs']);
+        }
+
+        if (isset($data['customer_cocnumber'])) {
+            $this->getInfoInstance()->setAdditionalInformation('customer_cocnumber', $data['customer_cocnumber']);
+        }
+
+        if (isset($data['customer_companyName'])) {
+            $this->getInfoInstance()->setAdditionalInformation('customer_companyName', $data['customer_companyName']);
+        }
+    }
+
+    /**
+     * @param string $dob
+     *
+     * @return bool|\DateTime|string
+     */
+    private function formatDob($dob)
+    {
+        $formattedDob = \DateTime::createFromFormat('d/m/Y', $dob);
+        $formattedDob = (!$formattedDob ? $dob : $formattedDob->format('Y-m-d'));
+
+        return $formattedDob;
+    }
 
     /**
      * {@inheritdoc}
