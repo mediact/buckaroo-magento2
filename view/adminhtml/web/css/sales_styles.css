@@ -66,7 +66,8 @@
 .tig_buckaroo_payment_card_cartebancaire,
 .tig_buckaroo_payment_card_dankort,
 .tig_buckaroo_payment_card_nexi,
-.tig_buckaroo_payment_klarna
+.tig_buckaroo_payment_klarna,
+.tig_buckaroo_payment_capayablein3
 {
     float:left;
     width: 100%;
@@ -261,6 +262,19 @@
 /* Apple Pay */
 .tig_buckaroo_payment_applepay:before {
     background: url(../images/tig_buckaroo_applepay_title.png) no-repeat;
+    float: left;
+    margin-right: 10px;
+    margin-top: -3px;
+    background-size: auto 25px;
+    width: 30px;
+    height: 30px;
+    content: ' ';
+    display :block;
+}
+
+/* Capayavle */
+.tig_buckaroo_payment_capayablein3:before {
+    background: url(../images/tig_buckaroo_capayable_title.png) no-repeat;
     float: left;
     margin-right: 10px;
     margin-top: -3px;

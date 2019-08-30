@@ -33,6 +33,7 @@
 namespace TIG\Buckaroo\Model\Method;
 
 use Magento\Framework\DataObject;
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Payment\Model\InfoInterface;
 use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Model\Order\Address;
@@ -90,7 +91,7 @@ class CapayableIn3 extends AbstractMethod
     /**
      * @param $data
      *
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     private function assignCapayableData($data)
     {
