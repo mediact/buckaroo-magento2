@@ -32,12 +32,35 @@
 
 namespace TIG\Buckaroo\Model\Method;
 
+use Magento\Developer\Helper\Data as DeveloperHelperData;
+use Magento\Framework\Api\AttributeValueFactory;
+use Magento\Framework\Api\ExtensionAttributesFactory;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Data\Collection\AbstractDb;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Model\Context;
+use Magento\Framework\Model\ResourceModel\AbstractResource;
+use Magento\Framework\ObjectManagerInterface;
+use Magento\Framework\Pricing\Helper\Data as PricingHelperData;
+use Magento\Framework\Registry;
+use Magento\Payment\Helper\Data as PaymentHelperData;
 use Magento\Payment\Model\InfoInterface;
+use Magento\Payment\Model\Method\Logger;
+use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Model\Order\Address;
+use TIG\Buckaroo\Gateway\GatewayInterface;
+use TIG\Buckaroo\Gateway\Http\TransactionBuilderFactory;
+use TIG\Buckaroo\Helper\Data as BuckarooHelperData;
+use TIG\Buckaroo\Model\ConfigProvider\Factory as ConfigProviderFactory;
 use TIG\Buckaroo\Model\ConfigProvider\Method\CapayableIn3 as CapayableIn3ConfigProvider;
+use TIG\Buckaroo\Model\ConfigProvider\Method\Factory as ConfigProviderMethodFactory;
+use TIG\Buckaroo\Model\RefundFieldsFactory;
+use TIG\Buckaroo\Model\ValidatorFactory;
+use TIG\Buckaroo\Service\Formatter\AddressFormatter;
+use TIG\Buckaroo\Service\Software\Data as SoftwareData;
 
 class CapayableIn3 extends AbstractMethod
 {
@@ -72,6 +95,65 @@ class CapayableIn3 extends AbstractMethod
 
     /** @var bool */
     public $usesRedirect                = false;
+
+    /** @var AddressFormatter */
+    public $addressFormatter;
+
+    /** @var SoftwareData */
+    public $softwareData;
+
+    public function __construct(
+        ObjectManagerInterface $objectManager,
+        Context $context,
+        Registry $registry,
+        ExtensionAttributesFactory $extensionFactory,
+        AttributeValueFactory $customAttributeFactory,
+        PaymentHelperData $paymentData,
+        ScopeConfigInterface $scopeConfig,
+        Logger $logger,
+        DeveloperHelperData $developmentHelper,
+        AddressFormatter $addressFormatter,
+        SoftwareData $softwareData,
+        AbstractResource $resource = null,
+        AbstractDb $resourceCollection = null,
+        GatewayInterface $gateway = null,
+        TransactionBuilderFactory $transactionBuilderFactory = null,
+        ValidatorFactory $validatorFactory = null,
+        BuckarooHelperData $helper = null,
+        RequestInterface $request = null,
+        RefundFieldsFactory $refundFieldsFactory = null,
+        ConfigProviderFactory $configProviderFactory = null,
+        ConfigProviderMethodFactory $configProviderMethodFactory = null,
+        PricingHelperData $priceHelper = null,
+        array $data = []
+    ) {
+        parent::__construct(
+            $objectManager,
+            $context,
+            $registry,
+            $extensionFactory,
+            $customAttributeFactory,
+            $paymentData,
+            $scopeConfig,
+            $logger,
+            $developmentHelper,
+            $resource,
+            $resourceCollection,
+            $gateway,
+            $transactionBuilderFactory,
+            $validatorFactory,
+            $helper,
+            $request,
+            $refundFieldsFactory,
+            $configProviderFactory,
+            $configProviderMethodFactory,
+            $priceHelper,
+            $data
+        );
+
+        $this->addressFormatter = $addressFormatter;
+        $this->softwareData = $softwareData;
+    }
 
     /**
      * {@inheritdoc}
@@ -130,14 +212,38 @@ class CapayableIn3 extends AbstractMethod
     }
 
     /**
+     * @param string          $value
+     * @param string          $name
+     * @param null|string     $groupType
+     * @param null|string|int $groupId
+     *
+     * @return array
+     */
+    private function getRequestParameterRow($value, $name, $groupType = null, $groupId = null)
+    {
+        $row = [
+            '_' => $value,
+            'Name' => $name
+        ];
+
+        if ($groupType !== null) {
+            $row['Group'] = $groupType;
+        }
+
+        if ($groupId !== null) {
+            $row['GroupID'] = $groupId;
+        }
+
+        return $row;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function getOrderTransactionBuilder($payment)
     {
         $transactionBuilder = $this->transactionBuilderFactory->get('order');
-
-        $services = [];
-        $services[] = $this->getCapayableService($payment);
+        $services = $this->getCapayableService($payment);
 
         /**
          * Buckaroo Push is send before Response, for correct flow we skip the first push
@@ -160,47 +266,288 @@ class CapayableIn3 extends AbstractMethod
      */
     public function getCapayableService($payment)
     {
-        $now = new \DateTime();
+        $requestParameter = [];
+        $requestParameter = array_merge($requestParameter, $this->getCustomerData($payment));
+        $requestParameter = array_merge($requestParameter, $this->getProductLineData($payment));
+        $requestParameter = array_merge($requestParameter, $this->getSubtotalLineData($payment));
+        $requestParameter = array_merge($requestParameter, $this->getGuaranteeVersion());
 
+        $services = [
+            'Name'             => 'capayable',
+            'Action'           => 'PayInInstallments',
+            'RequestParameter' => $requestParameter
+        ];
+
+        return $services;
+    }
+
+    /**
+     * @return array
+     * @throws \TIG\Buckaroo\Exception
+     */
+    private function getGuaranteeVersion()
+    {
         /** @var CapayableIn3ConfigProvider $capayableConfig */
         $capayableConfig = $this->configProviderMethodFactory->get($this->buckarooPaymentMethodCode);
+        $version = $capayableConfig->getVersion() ? 'true' : 'false';
+
+        $versionParameter = [
+            $this->getRequestParameterRow($version, 'IsInThreeGuarantee'),
+        ];
+
+        return $versionParameter;
+    }
+
+    /**
+     * @param OrderPaymentInterface|InfoInterface $payment
+     *
+     * @return array
+     * @throws \Exception
+     */
+    private function getCustomerData($payment)
+    {
+        $now = new \DateTime();
 
         /**@var Address $billingAddress */
         $billingAddress = $payment->getOrder()->getBillingAddress();
 
-        $services = [
-            'Name'             => 'capayable',
-            'Action'           => 'Pay',
-            'Version'          => 1,
-            'RequestParameter' => [
-                [
-                    '_'    => $billingAddress->getFirstname(),
-                    'Name' => 'CustomerFirstName',
-                ],
-                [
-                    '_'    => $billingAddress->getLastname(),
-                    'Name' => 'CustomerLastName',
-                ],
-                [
-                    '_'    => $billingAddress->getCountryId(),
-                    'Name' => 'CustomerCountry',
-                ],
-                [
-                    '_'    => $payment->getOrder()->getCustomerEmail(),
-                    'Name' => 'CustomerEmail',
-                ],
-                [
-                    '_'    => $now->format('Y-m-d'),
-                    'Name' => 'DateDue'
-                ],
-                [
-                    '_'    => $capayableConfig->getSendEmail(),
-                    'Name' => 'SendMail'
-                ]
-            ],
+        $streetData = $this->addressFormatter->formatStreet($billingAddress->getStreet());
+        $phoneData = $this->addressFormatter->formatTelephone(
+            $billingAddress->getTelephone(),
+            $billingAddress->getCountryId()
+        );
+
+        $customerData = [
+            $this->getRequestParameterRow($this->getCustomerType($payment), 'CustomerType'),
+            $this->getRequestParameterRow($now->format('Y-m-d'), 'InvoiceDate'),
+            $this->getRequestParameterRow($phoneData['clean'], 'Phone', 'Phone'),
+            $this->getRequestParameterRow($billingAddress->getEmail(), 'Email', 'Email'),
+
+            $this->getRequestParameterRow($this->getInitials($billingAddress->getFirstname()), 'Initials', 'Person'),
+            $this->getRequestParameterRow($billingAddress->getLastname(), 'LastName', 'Person'),
+            $this->getRequestParameterRow('nl-NL', 'Culture', 'Person'),
+            $this->getRequestParameterRow($payment->getAdditionalInformation('customer_gender'), 'Gender', 'Person'),
+            $this->getRequestParameterRow($payment->getAdditionalInformation('customer_DoB'), 'BirthDate', 'Person'),
+
+            $this->getRequestParameterRow($streetData['street'], 'Street', 'Address'),
+            $this->getRequestParameterRow($streetData['house_number'], 'HouseNumber', 'Address'),
+            $this->getRequestParameterRow($billingAddress->getPostcode(), 'ZipCode', 'Address'),
+            $this->getRequestParameterRow($billingAddress->getCity(), 'City', 'Address'),
+            $this->getRequestParameterRow($billingAddress->getCountryId(), 'Country', 'Address'),
         ];
 
-        return $services;
+        if (strlen($streetData['number_addition']) > 0) {
+            $param = $this->getRequestParameterRow($streetData['number_addition'], 'HouseNumberSuffix', 'Address');
+            $customerData[] = $param;
+        }
+
+        $customerData = array_merge($customerData, $this->getCompanyGroupData($payment));
+
+        return $customerData;
+    }
+
+    /**
+     * @param OrderPaymentInterface|InfoInterface $payment
+     *
+     * @return array
+     */
+    private function getCompanyGroupData($payment)
+    {
+        $companyGroupData = [];
+        $orderAs = $payment->getAdditionalInformation('customer_orderAs');
+        $companyName = $payment->getAdditionalInformation('customer_companyName');
+        $cocNumber = $payment->getAdditionalInformation('customer_cocnumber');
+
+        if ($orderAs != 2 && $orderAs != 3) {
+            return $companyGroupData;
+        }
+
+        $companyGroupData = [
+            $this->getRequestParameterRow($companyName, 'Name', 'Company'),
+            $this->getRequestParameterRow($cocNumber, 'ChamberOfCommerce', 'Company'),
+        ];
+
+        return $companyGroupData;
+    }
+
+    /**
+     * @param OrderPaymentInterface|InfoInterface $payment
+     *
+     * @return array
+     */
+    private function getProductLineData($payment)
+    {
+        /** @var \Magento\Sales\Api\Data\OrderItemInterface[] $orderItems */
+        $orderItems = $payment->getOrder()->getAllItems();
+        $productData = [];
+        $max = 99;
+        $i = 1;
+
+        foreach ($orderItems as $item) {
+            if (empty($item) || $item->hasParentItem()) {
+                continue;
+            }
+
+            $productData[] = $this->getRequestParameterRow($item->getSku(), 'Code', 'ProductLine', $i);
+            $productData[] = $this->getRequestParameterRow($item->getName(), 'Name', 'ProductLine', $i);
+            $productData[] = $this->getRequestParameterRow($item->getQtyOrdered(), 'Quantity', 'ProductLine', $i);
+            $productData[] = $this->getRequestParameterRow($item->getBasePriceInclTax(), 'Price', 'ProductLine', $i);
+
+            $i++;
+
+            if ($i > $max) {
+                break;
+            }
+        }
+
+        return $productData;
+    }
+
+    /**
+     * @param OrderPaymentInterface|InfoInterface $payment
+     *
+     * @return array
+     */
+    private function getSubtotalLineData($payment)
+    {
+        $groupId = 1;
+        $subtotalLine = [];
+        $order = $payment->getOrder();
+
+        $discountLine = $this->getDiscountLine($order, $groupId);
+
+        if (!empty($discountLine)) {
+            $subtotalLine = array_merge($subtotalLine, $discountLine);
+            $groupId++;
+        }
+
+        $feeLine = $this->getFeeLine($order, $groupId);
+
+        if (!empty($feeLine)) {
+            $subtotalLine = array_merge($subtotalLine, $feeLine);
+            $groupId++;
+        }
+
+        $shippingCostsLine = $this->getShippingCostsLine($order, $groupId);
+        if (!empty($shippingCostsLine)) {
+            $subtotalLine = array_merge($subtotalLine, $shippingCostsLine);
+        }
+
+        return $subtotalLine;
+    }
+
+    /**
+     * @param OrderInterface $order
+     * @param int            $groupId
+     *
+     * @return array
+     */
+    private function getDiscountLine($order, $groupId)
+    {
+        $discountLineData = [];
+        $discount = abs((double)$order->getDiscountAmount());
+
+        if ($this->softwareData->getProductMetaData()->getEdition() == 'Enterprise') {
+            $discount += abs((double)$order->getCustomerBalanceAmount());
+        }
+
+        if ($discount <= 0) {
+            return $discountLineData;
+        }
+
+        $discount = (-1 * round($discount, 2));
+        $discountLineData[] = $this->getRequestParameterRow('Korting', 'Name', 'SubtotalLine', $groupId);
+        $discountLineData[] = $this->getRequestParameterRow($discount, 'Value', 'SubtotalLine', $groupId);
+
+        return $discountLineData;
+    }
+
+    /**
+     * @param OrderInterface $order
+     * @param int            $groupId
+     *
+     * @return array
+     */
+    private function getFeeLine($order, $groupId)
+    {
+        $feeLineData = [];
+        $fee = (double)$order->getBuckarooFee();
+
+        if ($fee <= 0) {
+            return $feeLineData;
+        }
+
+        $feeTax = (double)$order->getBuckarooFeeTaxAmount();
+        $feeInclTax = round($fee + $feeTax, 2);
+        $feeLineData[] = $this->getRequestParameterRow('Betaaltoeslag', 'Name', 'SubtotalLine', $groupId);
+        $feeLineData[] = $this->getRequestParameterRow($feeInclTax, 'Value', 'SubtotalLine', $groupId);
+
+        return $feeLineData;
+    }
+
+    /**
+     * @param OrderInterface $order
+     * @param int            $groupId
+     *
+     * @return array
+     */
+    private function getShippingCostsLine($order, $groupId)
+    {
+        $shippingCostsLine = [];
+        $shippingAmount = $order->getShippingInclTax();
+
+        if ($shippingAmount <= 0) {
+            return $shippingCostsLine;
+        }
+
+        $shippingCostsLine[] = $this->getRequestParameterRow('Verzendkosten', 'Name', 'SubtotalLine', $groupId);
+        $shippingCostsLine[] = $this->getRequestParameterRow($shippingAmount, 'Value', 'SubtotalLine', $groupId);
+
+        return $shippingCostsLine;
+    }
+
+    /**
+     * @param OrderPaymentInterface|InfoInterface $payment
+     *
+     * @return string
+     */
+    private function getCustomerType($payment)
+    {
+        $orderAs = $payment->getAdditionalInformation('customer_orderAs');
+
+        switch ($orderAs) {
+            case 1:
+                $customerType = 'Debtor';
+                break;
+            case 2:
+                $customerType = 'Company';
+                break;
+            case 3:
+                $customerType = 'SoleProprietor';
+                break;
+            default:
+                $customerType = '';
+                break;
+        }
+
+        return $customerType;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return string
+     */
+    public function getInitials($name)
+    {
+        $initials = '';
+        $nameParts = explode(' ', $name);
+
+        foreach ($nameParts as $part) {
+            $initials .= strtoupper($part[0]) . '.';
+        }
+
+        return $initials;
     }
 
     /**

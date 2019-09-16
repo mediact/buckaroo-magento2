@@ -36,6 +36,7 @@ use TIG\Buckaroo\Model\Method\CapayableIn3 as CapayableIn3Method;
 
 /**
  * @method getPaymentFeeLabel()
+ * @method getVersion()
  */
 class CapayableIn3 extends AbstractConfigProvider
 {
@@ -51,6 +52,8 @@ class CapayableIn3 extends AbstractConfigProvider
     const XPATH_ALLOWED_CURRENCIES = 'payment/tig_buckaroo_capayablein3/allowed_currencies';
     const XPATH_ALLOW_SPECIFIC     = 'payment/tig_buckaroo_capayablein3/allowspecific';
     const XPATH_SPECIFIC_COUNTRY   = 'payment/tig_buckaroo_capayablein3/specificcountry';
+
+    const XPATH_CAPAYABLEIN3_VERSION = 'payment/tig_buckaroo_capayablein3/version';
 
     /** @var array */
     protected $allowedCurrencies = [
