@@ -574,9 +574,8 @@ class CapayableIn3 extends AbstractMethod
         $transactionBuilder = $this->transactionBuilderFactory->get('refund');
 
         $services = [
-            'Name'    => $this->buckarooPaymentMethodCode,
-            'Action'  => 'Refund',
-            'Version' => 1,
+            'Name'    => 'capayable',
+            'Action'  => 'Refund'
         ];
 
         $requestParams = $this->addExtraFields($this->_code);
