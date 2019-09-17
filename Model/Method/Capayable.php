@@ -55,24 +55,25 @@ use TIG\Buckaroo\Gateway\GatewayInterface;
 use TIG\Buckaroo\Gateway\Http\TransactionBuilderFactory;
 use TIG\Buckaroo\Helper\Data as BuckarooHelperData;
 use TIG\Buckaroo\Model\ConfigProvider\Factory as ConfigProviderFactory;
-use TIG\Buckaroo\Model\ConfigProvider\Method\CapayableIn3 as CapayableIn3ConfigProvider;
 use TIG\Buckaroo\Model\ConfigProvider\Method\Factory as ConfigProviderMethodFactory;
 use TIG\Buckaroo\Model\RefundFieldsFactory;
 use TIG\Buckaroo\Model\ValidatorFactory;
 use TIG\Buckaroo\Service\Formatter\AddressFormatter;
 use TIG\Buckaroo\Service\Software\Data as SoftwareData;
 
-class CapayableIn3 extends AbstractMethod
+class Capayable extends AbstractMethod
 {
     /** Payment Code */
-    const PAYMENT_METHOD_CODE = 'tig_buckaroo_capayablein3';
+    const PAYMENT_METHOD_CODE = '';
+
+    const CAPAYABLE_ORDER_SERVICE_ACTION = '';
 
     /** @var string */
-    public $buckarooPaymentMethodCode = 'capayablein3';
+    public $buckarooPaymentMethodCode = '';
 
     // @codingStandardsIgnoreStart
     /** @var string */
-    protected $_code = self::PAYMENT_METHOD_CODE;
+    protected $_code = '';
 
     /** @var bool */
     protected $_isGateway               = true;
@@ -270,32 +271,14 @@ class CapayableIn3 extends AbstractMethod
         $requestParameter = array_merge($requestParameter, $this->getCustomerData($payment));
         $requestParameter = array_merge($requestParameter, $this->getProductLineData($payment));
         $requestParameter = array_merge($requestParameter, $this->getSubtotalLineData($payment));
-        $requestParameter = array_merge($requestParameter, $this->getGuaranteeVersion());
 
         $services = [
             'Name'             => 'capayable',
-            'Action'           => 'PayInInstallments',
+            'Action'           => static::CAPAYABLE_ORDER_SERVICE_ACTION,
             'RequestParameter' => $requestParameter
         ];
 
         return $services;
-    }
-
-    /**
-     * @return array
-     * @throws \TIG\Buckaroo\Exception
-     */
-    private function getGuaranteeVersion()
-    {
-        /** @var CapayableIn3ConfigProvider $capayableConfig */
-        $capayableConfig = $this->configProviderMethodFactory->get($this->buckarooPaymentMethodCode);
-        $version = $capayableConfig->getVersion() ? 'true' : 'false';
-
-        $versionParameter = [
-            $this->getRequestParameterRow($version, 'IsInThreeGuarantee'),
-        ];
-
-        return $versionParameter;
     }
 
     /**
@@ -306,12 +289,9 @@ class CapayableIn3 extends AbstractMethod
      */
     private function getCustomerData($payment)
     {
-        $now = new \DateTime();
-
         /**@var Address $billingAddress */
         $billingAddress = $payment->getOrder()->getBillingAddress();
-
-        $streetData = $this->addressFormatter->formatStreet($billingAddress->getStreet());
+        $now = new \DateTime();
         $phoneData = $this->addressFormatter->formatTelephone(
             $billingAddress->getTelephone(),
             $billingAddress->getCountryId()
@@ -321,29 +301,60 @@ class CapayableIn3 extends AbstractMethod
             $this->getRequestParameterRow($this->getCustomerType($payment), 'CustomerType'),
             $this->getRequestParameterRow($now->format('Y-m-d'), 'InvoiceDate'),
             $this->getRequestParameterRow($phoneData['clean'], 'Phone', 'Phone'),
-            $this->getRequestParameterRow($billingAddress->getEmail(), 'Email', 'Email'),
+            $this->getRequestParameterRow($billingAddress->getEmail(), 'Email', 'Email')
+        ];
 
+        $customerData = array_merge($customerData, $this->getPersonGroupData($payment));
+        $customerData = array_merge($customerData, $this->getAddressGroupData($billingAddress));
+        $customerData = array_merge($customerData, $this->getCompanyGroupData($payment));
+
+        return $customerData;
+    }
+
+    /**
+     * @param OrderPaymentInterface|InfoInterface $payment
+     *
+     * @return array
+     */
+    private function getPersonGroupData($payment)
+    {
+        /**@var Address $billingAddress */
+        $billingAddress = $payment->getOrder()->getBillingAddress();
+
+        $personGroupData = [
             $this->getRequestParameterRow($this->getInitials($billingAddress->getFirstname()), 'Initials', 'Person'),
             $this->getRequestParameterRow($billingAddress->getLastname(), 'LastName', 'Person'),
             $this->getRequestParameterRow('nl-NL', 'Culture', 'Person'),
             $this->getRequestParameterRow($payment->getAdditionalInformation('customer_gender'), 'Gender', 'Person'),
-            $this->getRequestParameterRow($payment->getAdditionalInformation('customer_DoB'), 'BirthDate', 'Person'),
+            $this->getRequestParameterRow($payment->getAdditionalInformation('customer_DoB'), 'BirthDate', 'Person')
+        ];
 
+        return $personGroupData;
+    }
+
+    /**
+     * @param Address $billingAddress
+     *
+     * @return array
+     */
+    private function getAddressGroupData($billingAddress)
+    {
+        $streetData = $this->addressFormatter->formatStreet($billingAddress->getStreet());
+
+        $addressGroupData = [
             $this->getRequestParameterRow($streetData['street'], 'Street', 'Address'),
             $this->getRequestParameterRow($streetData['house_number'], 'HouseNumber', 'Address'),
             $this->getRequestParameterRow($billingAddress->getPostcode(), 'ZipCode', 'Address'),
             $this->getRequestParameterRow($billingAddress->getCity(), 'City', 'Address'),
-            $this->getRequestParameterRow($billingAddress->getCountryId(), 'Country', 'Address'),
+            $this->getRequestParameterRow($billingAddress->getCountryId(), 'Country', 'Address')
         ];
 
         if (strlen($streetData['number_addition']) > 0) {
             $param = $this->getRequestParameterRow($streetData['number_addition'], 'HouseNumberSuffix', 'Address');
-            $customerData[] = $param;
+            $addressGroupData[] = $param;
         }
 
-        $customerData = array_merge($customerData, $this->getCompanyGroupData($payment));
-
-        return $customerData;
+        return $addressGroupData;
     }
 
     /**
@@ -415,14 +426,12 @@ class CapayableIn3 extends AbstractMethod
         $order = $payment->getOrder();
 
         $discountLine = $this->getDiscountLine($order, $groupId);
-
         if (!empty($discountLine)) {
             $subtotalLine = array_merge($subtotalLine, $discountLine);
             $groupId++;
         }
 
         $feeLine = $this->getFeeLine($order, $groupId);
-
         if (!empty($feeLine)) {
             $subtotalLine = array_merge($subtotalLine, $feeLine);
             $groupId++;

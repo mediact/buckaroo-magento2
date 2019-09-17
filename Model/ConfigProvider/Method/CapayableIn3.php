@@ -32,7 +32,7 @@
 
 namespace TIG\Buckaroo\Model\ConfigProvider\Method;
 
-use TIG\Buckaroo\Model\Method\CapayableIn3 as CapayableIn3Method;
+use TIG\Buckaroo\Model\Method\Capayable\Installments as CapayableIn3Method;
 
 /**
  * @method getPaymentFeeLabel()

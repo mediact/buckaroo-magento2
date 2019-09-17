@@ -391,7 +391,7 @@
 
             <tig_buckaroo_capayablein3>
                 <active>0</active>
-                <model>TIG\Buckaroo\Model\Method\CapayableIn3</model>
+                <model>TIG\Buckaroo\Model\Method\Capayable\Installments</model>
                 <order_status>pending</order_status>
                 <title>TIG Buckaroo Capayable In3</title>
                 <allowspecific>0</allowspecific>
