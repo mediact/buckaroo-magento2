@@ -266,6 +266,10 @@
                     <item name="type" xsi:type="string">capayablein3</item>
                     <item name="model" xsi:type="string">TIG\Buckaroo\Model\ConfigProvider\Method\CapayableIn3</item>
                 </item>
+                <item name="capayablepostpay" xsi:type="array">
+                    <item name="type" xsi:type="string">capayablepostpay</item>
+                    <item name="model" xsi:type="string">TIG\Buckaroo\Model\ConfigProvider\Method\CapayablePostpay</item>
+                </item>
             </argument>
         </arguments>
     </type>

@@ -112,5 +112,7 @@
         <include path="TIG_Buckaroo::system/payment_methods/applepay.xml"/>
 
         <include path="TIG_Buckaroo::system/payment_methods/capayable_in3.xml"/>
+
+        <include path="TIG_Buckaroo::system/payment_methods/capayable_postpay.xml"/>
     </group>
 </include>

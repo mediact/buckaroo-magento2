@@ -67,6 +67,7 @@
                 <item name="buckaroo_config_provider_afterpay20" xsi:type="object">TIG\Buckaroo\Model\ConfigProvider\Method\Afterpay20</item>
                 <item name="buckaroo_config_provider_applepay" xsi:type="object">TIG\Buckaroo\Model\ConfigProvider\Method\Applepay</item>
                 <item name="buckaroo_config_provider_capayablein3" xsi:type="object">TIG\Buckaroo\Model\ConfigProvider\Method\CapayableIn3</item>
+                <item name="buckaroo_config_provider_capayablepostpay" xsi:type="object">TIG\Buckaroo\Model\ConfigProvider\Method\CapayablePostpay</item>
             </argument>
         </arguments>
     </type>
