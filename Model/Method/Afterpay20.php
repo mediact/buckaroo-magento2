@@ -45,6 +45,7 @@ use Magento\Sales\Api\Data\InvoiceInterface;
 use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Tax\Model\Calculation;
 use Magento\Tax\Model\Config;
+use Magento\Quote\Model\Quote\AddressFactory;
 use TIG\Buckaroo\Service\Software\Data as SoftwareData;
 
 class Afterpay20 extends AbstractMethod
@@ -163,6 +164,11 @@ class Afterpay20 extends AbstractMethod
     private $softwareData;
 
     /**
+     * @var AddressFactory
+     */
+    private $addressFactory;
+
+    /**
      * @param Calculation $taxCalculation
      * @param Config $taxConfig
      * @param \Magento\Framework\ObjectManagerInterface               $objectManager
@@ -175,6 +181,7 @@ class Afterpay20 extends AbstractMethod
      * @param \Magento\Payment\Model\Method\Logger                    $logger
      * @param \Magento\Developer\Helper\Data                          $developmentHelper
      * @param \TIG\Buckaroo\Model\ConfigProvider\BuckarooFee          $configProviderBuckarooFee
+     * @param AddressFactory $addressFactory
      * @param SoftwareData                                            $softwareData
      * @param \Magento\Framework\Model\ResourceModel\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\AbstractDb           $resourceCollection
@@ -202,6 +209,7 @@ class Afterpay20 extends AbstractMethod
         \Magento\Payment\Model\Method\Logger $logger,
         \Magento\Developer\Helper\Data $developmentHelper,
         \TIG\Buckaroo\Model\ConfigProvider\BuckarooFee $configProviderBuckarooFee,
+        AddressFactory $addressFactory,
         SoftwareData $softwareData,
         \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
@@ -244,6 +252,7 @@ class Afterpay20 extends AbstractMethod
         $this->softwareData = $softwareData;
         $this->taxCalculation = $taxCalculation;
         $this->taxConfig = $taxConfig;
+        $this->addressFactory  = $addressFactory;
     }
 
     /**
@@ -593,7 +602,7 @@ class Afterpay20 extends AbstractMethod
                 1,
                 $this->calculateProductPrice($item, $includesTax),
                 $item->getTaxPercent(),
-                    $payment->getOrder()->getStore()
+                $payment->getOrder()->getStore()
             );
 
             /*
@@ -1243,15 +1252,21 @@ class Afterpay20 extends AbstractMethod
      */
     public function getRequestShippingData($payment)
     {
+        $order = $payment->getOrder();
         /**
          * @var \Magento\Sales\Api\Data\OrderAddressInterface $shippingAddress
          */
-        $shippingAddress = $payment->getOrder()->getShippingAddress();
+        $shippingAddress = $order->getShippingAddress();
+        $postNLPakjeGemakAddress = $this->getPostNLPakjeGemakAddressInQuote($order->getQuoteId());
+
+        if (!empty($postNLPakjeGemakAddress) && !empty($postNLPakjeGemakAddress->getData())) {
+            $shippingAddress = $postNLPakjeGemakAddress;
+        }
+
         $streetFormat    = $this->formatStreet($shippingAddress->getStreet());
         $category = 'Person';
 
         $gender = 'Mrs';
-
         if ($payment->getAdditionalInformation('customer_gender') == '1') {
             $gender = 'Mr';
         }
@@ -1326,6 +1341,25 @@ class Afterpay20 extends AbstractMethod
         }
 
         return $shippingData;
+    }
+
+    /**
+     * Check if there is a "pakjegemak" address stored in the quote by this order.
+     * Afterpay wants to receive the "pakjegemak" address instead of the customer shipping address.
+     *
+     * @param int $quoteId
+     *
+     * @return array|\Magento\Quote\Model\Quote\Address
+     */
+    public function getPostNLPakjeGemakAddressInQuote($quoteId)
+    {
+        $quoteAddress = $this->addressFactory->create();
+
+        $collection = $quoteAddress->getCollection();
+        $collection->addFieldToFilter('quote_id', $quoteId);
+        $collection->addFieldToFilter('address_type', 'pakjegemak');
+        // @codingStandardsIgnoreLine
+        return $collection->setPageSize(1)->getFirstItem();
     }
 
     /**
