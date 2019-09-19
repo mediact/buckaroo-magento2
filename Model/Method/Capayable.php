@@ -552,8 +552,12 @@ class Capayable extends AbstractMethod
         $initials = '';
         $nameParts = explode(' ', $name);
 
+        if (empty($nameParts)) {
+            return $initials;
+        }
+
         foreach ($nameParts as $part) {
-            $initials .= strtoupper($part[0]) . '.';
+            $initials .= strtoupper(substr($part, 0, 1)) . '.';
         }
 
         return $initials;

@@ -32,6 +32,7 @@
 
 namespace TIG\Buckaroo\Model\ConfigProvider\Method;
 
+use Magento\Store\Model\ScopeInterface;
 use TIG\Buckaroo\Model\Method\Capayable\Installments as CapayableIn3Method;
 
 /**
@@ -69,6 +70,10 @@ class CapayableIn3 extends AbstractConfigProvider
      */
     public function getConfig()
     {
+        if (!$this->scopeConfig->getValue(self::XPATH_CAPAYABLEIN3_ACTIVE, ScopeInterface::SCOPE_STORE)) {
+            return [];
+        }
+
         $paymentFeeLabel = $this->getBuckarooPaymentFeeLabel(CapayableIn3Method::PAYMENT_METHOD_CODE);
 
         return [
@@ -92,7 +97,7 @@ class CapayableIn3 extends AbstractConfigProvider
     {
         $paymentFee = $this->scopeConfig->getValue(
             self::XPATH_CAPAYABLEIN3_PAYMENT_FEE,
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            ScopeInterface::SCOPE_STORE,
             $storeId
         );
 
