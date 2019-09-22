@@ -227,6 +227,23 @@ class OrderTest extends BaseTest
                     'Invoice' => '#3571',
                 ]
             ],
+            'filtered capayable payininstallments' => [
+                [
+                    'Name' => 'capayable',
+                    'Action' => 'PayInInstallments'
+                ],
+                [
+                    'Invoice' => '#3571',
+                    'Order' => '#8294',
+                    'AmountCredit' => '42.00',
+                    'OriginalTransactionKey' => 'reyk879',
+                ],
+                [
+                    'Invoice' => '#3571',
+                    'AmountCredit' => '42.00',
+                    'OriginalTransactionKey' => 'reyk879',
+                ]
+            ],
             'cancel transaction method' => [
                 [],
                 [

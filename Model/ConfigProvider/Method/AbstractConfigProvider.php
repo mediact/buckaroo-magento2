@@ -91,6 +91,11 @@ abstract class AbstractConfigProvider extends BaseAbstractConfigProvider impleme
     protected $allowedCurrencies = null;
 
     /**
+     * @var array|null
+     */
+    protected $allowedCountries = null;
+
+    /**
      * @var PaymentFee
      */
     protected $paymentFeeHelper;
@@ -190,6 +195,14 @@ abstract class AbstractConfigProvider extends BaseAbstractConfigProvider impleme
     public function getBaseAllowedCurrencies()
     {
         return $this->allowedCurrencies;
+    }
+
+    /**
+     * @return array
+     */
+    public function getBaseAllowedCountries()
+    {
+        return $this->allowedCountries;
     }
 
     /**
