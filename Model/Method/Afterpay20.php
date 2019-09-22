@@ -571,7 +571,7 @@ class Afterpay20 extends AbstractMethod
                 $item->getSku(),
                 1,
                 $this->calculateProductPrice($item, $includesTax),
-                $item->getTaxPercent(),
+                $item->getTaxPercent()
             );
 
             $articles = array_merge($articles, $article);
