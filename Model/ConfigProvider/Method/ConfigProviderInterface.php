@@ -59,6 +59,11 @@ interface ConfigProviderInterface
     public function getBaseAllowedCurrencies();
 
     /**
+     * @return array
+     */
+    public function getBaseAllowedCountries();
+
+    /**
      * @return string
      */
     public function getBuckarooPaymentFeeLabel();

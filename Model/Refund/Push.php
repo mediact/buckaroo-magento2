@@ -260,6 +260,7 @@ class Push
             $data['adjustment_negative'] = '0';
             $data['adjustment_positive'] = $adjustment;
             $data['items']               = $this->getCreditmemoDataItems();
+            $data['qtys']                = $this->setCreditQtys($data['items']);
         } else {
             $this->logging->addDebug('With this refund of '. $this->creditAmount.' the grand total will be refunded.');
             $data['shipping_amount']     = $this->caluclateShippingCostToRefund();
