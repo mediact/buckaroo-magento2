@@ -110,7 +110,6 @@ class Order extends AbstractTransactionBuilder
         $store = $order->getStore();
 
         if ($this->configProviderAccount->getCreateOrderBeforeTransaction($store)) {
-
             $newStatus = $this->configProviderAccount->getOrderStatusNew($store);
             $orderState = 'new';
             if (!$newStatus) {
@@ -129,7 +128,7 @@ class Order extends AbstractTransactionBuilder
 
         // Some of the plaza gateway requests do not support IPv6.
         if (strpos($ip, ':') !== false) {
-            $ip = '127.0.0.'.rand(1, 100);
+            $ip = '127.0.0.' . rand(1, 100);
         }
 
         $body = [
@@ -229,6 +228,10 @@ class Order extends AbstractTransactionBuilder
             ($services['Name'] == 'klarna' && $services['Action'] == 'Pay')
         ) {
             unset($body['OriginalTransactionKey']);
+        }
+
+        if (($services['Name'] == 'capayable' && $services['Action'] == 'PayInInstallments')) {
+            unset($body['Order']);
         }
 
         if ($services['Name'] == 'CreditManagement3' && $services['Action'] == 'CreateCreditNote') {
